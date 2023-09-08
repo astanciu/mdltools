@@ -1,0 +1,25 @@
+{
+  "name": "mdltools",
+  "packageManager": "yarn@3.6.3",
+  "scripts": {
+    "example": "yarn ts-node src/example/example.ts",
+    "generate": "yarn ts-node src/example/generate.ts",
+    "mdoc": "yarn ts-node src/example/mdoc.ts",
+    "build": "rimraf ./build && tsc"
+  },
+  "dependencies": {
+    "cbor-web": "^9.0.1",
+    "cose-js": "^0.8.4",
+    "jose": "^4.14.6"
+  },
+  "devDependencies": {
+    "@types/cbor": "^6.0.0",
+    "@types/cose-js": "^0.8.1",
+    "@types/node": "^20.5.9",
+    "esbuild": "^0.19.2",
+    "esbuild-plugin-polyfill-node": "^0.3.0",
+    "rimraf": "^5.0.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  }
+}
