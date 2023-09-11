@@ -1,28 +1,3 @@
-export type IssuerSignedItem = {
-  digestID: number;
-  random: Buffer;
-  elementIdentifier: string;
-  elementValue: any;
-};
-
-export type IssuerNameSpaces = Record<string, IssuerSignedItem[]>;
-export type IssuerAuth = [Buffer, Map<number, Buffer>, Buffer, Buffer];
-export type IssuerSigned = {
-  nameSpaces: IssuerNameSpaces;
-  issuerAuth: IssuerAuth;
-};
-
-export type Document = {
-  docType: string;
-  issuerSigned: IssuerSigned;
-};
-
-export type MDLDoc = {
-  version: string;
-  documents: Document[];
-  status: number;
-};
-
 export type DrivingCode = {
   code: string;
   sign?: string;
@@ -72,3 +47,13 @@ export type MDL_DATA_MODEL = {
 
 // Covers all namespaces
 export type MDLAttributes = MDL_DATA_MODEL & Record<string, any>;
+
+/**
+ * [
+ *  mdocGeneratedNonce
+ *  clientId
+ *  responseUri
+ *  nonce
+ * ]
+ */
+export type OID4VPHandover = [string, string, string, string];

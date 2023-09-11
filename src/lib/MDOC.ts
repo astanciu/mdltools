@@ -1,6 +1,8 @@
 import cbor from "cbor";
-import { IssuerSignedItem, MDLAttributes, MDLDoc } from "./types";
+import { MDLAttributes } from "./types/types";
+import { IssuerSignedItem, MDLDoc } from "./types/MDOC";
 import { MDL_FIELDS } from "./config";
+import { cborDecode } from "./utils";
 
 const blocker = {};
 
@@ -32,11 +34,8 @@ export class MDOC {
   }
 
   static async decode(data: Buffer) {
-    const extraTags = {
-      24: (value) => cbor.decode(value, { tags: extraTags }),
-      1004: (dateString) => dateString,
-    };
-    const mdoc: MDLDoc = await cbor.decode(data, { tags: extraTags });
+    const mdoc: MDLDoc = await cborDecode(data)
+
     return mdoc;
   }
 

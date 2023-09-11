@@ -1,9 +1,10 @@
 import { randomBytes, createHash } from "node:crypto";
-import { MDL_FIELDS, TAG_MAP } from "./config";
+
 import * as jose from "jose";
 import cbor from "cbor";
 import cose from "cose-js";
-import { IssuerSignedItem } from "./types";
+import { IssuerSignedItem } from "./types/MDOC";
+import { maybeEncodeValue } from "./utils";
 
 export class MDOCBuilder {
   public readonly defaultDocType = "org.iso.18013.5.1.mDL";
@@ -74,7 +75,7 @@ export class MDOCBuilder {
     digestID: number
   ): Promise<{ digest: IssuerSignedItem; hash: Buffer }> {
     const salt = randomBytes(32);
-    const encodedValue = this.maybeEncodeValue(key, value);
+    const encodedValue = maybeEncodeValue(key, value);
 
     const digest: IssuerSignedItem = {
       digestID,
@@ -85,16 +86,6 @@ export class MDOCBuilder {
 
     const hash = await this.hashDigest(digest);
     return { digest, hash };
-  }
-
-  private maybeEncodeValue(key: string, value: any): any {
-    // only dates of type 'full-date' need to be tagged as 1004
-    const tag = TAG_MAP[key];
-    if (!tag) return value;
-
-    if (tag === 1004) return new cbor.Tagged(1004, value);
-
-    throw new Error(`Unknown tag "${tag}"`);
   }
 
   async hashDigest(digest: IssuerSignedItem): Promise<Buffer> {
@@ -146,9 +137,7 @@ export class MDOCBuilder {
       u: { kid: "11" }, // ?? what should this be?
     };
     const signer: cose.sign.Signer = {
-      key: {
-        d: Buffer.from(jwk.d, "hex"),
-      },
+      key: jwk,
     };
     const signedCbor = await cose.sign.create(headers, msoCbor, signer);
     // signedCbor is a cbor of an object with shape {err, tag, value}. We only want the value
