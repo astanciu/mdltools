@@ -17,7 +17,7 @@ export class MDOCBuilder {
 
   private readonly privateKey: jose.KeyLike;
 
-  constructor(privateKey) {
+  constructor(privateKey: jose.KeyLike) {
     this.privateKey = privateKey;
   }
 
@@ -105,7 +105,11 @@ export class MDOCBuilder {
     return date.toISOString().split(".")[0] + "Z";
   }
 
-  async buildMSO(deviceKey: any = undefined) {
+  async buildMSO() {
+    const jwk = await jose.exportJWK(this.privateKey);
+    const { crv,  x, y } = jwk;
+    // @ts-ignore;
+    const deviceKey = cose.common.TranslateKey({ crv, x, y });
     const utcNow = new Date();
     const expTime = new Date();
     expTime.setHours(expTime.getHours() + 5);
@@ -130,7 +134,6 @@ export class MDOCBuilder {
     };
 
     const msoCbor = cbor.encode(mso);
-    const jwk = await jose.exportJWK(this.privateKey);
 
     const headers: cose.Headers = {
       p: { alg: "ES256" },
@@ -141,6 +144,7 @@ export class MDOCBuilder {
         d: Buffer.from(jwk.d, "base64url"),
       },
     };
+
     const signedCbor = await cose.sign.create(headers, msoCbor, signer);
     // signedCbor is a cbor of an object with shape {err, tag, value}. We only want the value
     // so we need to decode it and extract it

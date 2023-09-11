@@ -13,15 +13,26 @@ export type DeviceSigned = {
   deviceAuth: DeviceAuth;
 };
 
+export type ErrorCode = number;
+
+export type ErrorItems = Record<string, ErrorCode>;
+
+export type Errors = Record<string, ErrorItems>;
+
 export type DeviceResponseDocument = {
   docType: string;
   issuerSigned: IssuerSigned;
   deviceSigned: DeviceSigned;
+  errors?: Errors;
 };
 
-export type DeviceResponse = {
+export type DocumentError = {
+  DocType: ErrorCode;
+};
+
+export type DeviceResponseType = {
   version: string;
-  documents: DeviceResponseDocument[];
-  documentErrors: DocumentError[];
+  documents?: DeviceResponseDocument[];
+  documentErrors?: DocumentError[];
   status: number;
 };
