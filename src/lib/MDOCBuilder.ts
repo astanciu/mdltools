@@ -137,7 +137,9 @@ export class MDOCBuilder {
       u: { kid: "11" }, // ?? what should this be?
     };
     const signer: cose.sign.Signer = {
-      key: jwk,
+      key: {
+        d: Buffer.from(jwk.d, "base64url"),
+      },
     };
     const signedCbor = await cose.sign.create(headers, msoCbor, signer);
     // signedCbor is a cbor of an object with shape {err, tag, value}. We only want the value
