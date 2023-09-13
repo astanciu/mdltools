@@ -14,31 +14,21 @@ main().catch((e) => {
 
 async function main() {
   /** -------- Variables  ------- **/
-  const issuerPublicPem = `-----BEGIN CERTIFICATE-----
-MIICJTCCAcugAwIBAgIBATAJBgcqhkjOPQQBMB4xHDAJBgNVBAYTAlJVMA8GA1UE
-Ax4IAFQAZQBzAHQwHhcNMjMwOTEzMDA1NTI2WhcNMjQwOTEzMDA1NTI2WjAeMRww
-CQYDVQQGEwJSVTAPBgNVBAMeCABUAGUAcwB0MFkwEwYHKoZIzj0CAQYIKoZIzj0D
-AQcDQgAEu/TzN+yXlt0wYZNYuo6601woX521MgT6nrEZLr6mPaNo97ey0Zd5yHe0
-dUVL5euVVDFsK5ORGRsEhw7IuAL/vaOB+jCB9zASBgNVHRMBAf8ECDAGAQH/AgED
-MAsGA1UdDwQEAwIABjBjBgNVHSUEXDBaBgRVHSUABggrBgEFBQcDAQYIKwYBBQUH
-AwIGCCsGAQUFBwMDBggrBgEFBQcDBAYIKwYBBQUHAwgGCCsGAQUFBwMJBgorBgEE
-AYI3CgMBBgorBgEEAYI3CgMEMBcGCSsGAQQBgjcUAgQKDAhjZXJ0VHlwZTAjBgkr
-BgEEAYI3FQIEFgQUAQEBAQEBAQEBAQEBAQEBAQEBAQEwHAYJKwYBBAGCNxUHBA8w
-DQYFKQEBAQECAQoCARQwEwYJKwYBBAGCNxUBBAYCBAAUAAowCQYHKoZIzj0EAQNJ
-ADBGAiEA2ds+Um4zUgm5K3uHtfbBjfQ+NSbOfHyp/bEcuVOJBY4CIQD4iIgmUF6n
-854ZH4DTKeoVO4J5b9Jos5cnngpYvUbOCg==
+  const issuerCertificate = `-----BEGIN CERTIFICATE-----
+MIIBXjCCAQSgAwIBAgIGAYqPYNmSMAoGCCqGSM49BAMCMDYxNDAyBgNVBAMMK1JF
+MzdhajR0SlJ4TU9kNWRvM2tYUlloZEl0RWVaSUxDazlWM1hoU21pejQwHhcNMjMw
+OTEzMTYzMDAzWhcNMjQwNzA5MTYzMDAzWjA2MTQwMgYDVQQDDCtSRTM3YWo0dEpS
+eE1PZDVkbzNrWFJZaGRJdEVlWklMQ2s5VjNYaFNtaXo0MFkwEwYHKoZIzj0CAQYI
+KoZIzj0DAQcDQgAEiTwtg0eQbcbNabf2Nq9L/VM/lhhPCq2s0Qgw2kRx29tgrBcN
+HPxTT64tnc1Ij3dH/fl42SXqMenpCDw4K6ntUzAKBggqhkjOPQQDAgNIADBFAiEA
+9fQAtrGdvlqd6IEPPT+r02Ld5mDeNv0svLzOi2Bw57sCICaQArFAkkx2v1Y+8H/e
+sOtrI7/Xzi2Fyyutu05fkURK
 -----END CERTIFICATE-----`;
 
   const issuerPrivatePem = `-----BEGIN PRIVATE KEY-----
-MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgv/5WLw0E6AS9XMt/
-wd2SfKj/B9OVJo1kxATFVGiN9AegCgYIKoZIzj0DAQehRANCAAS79PM37JeW3TBh
-k1i6jrrTXChfnbUyBPqesRkuvqY9o2j3t7LRl3nId7R1RUvl65VUMWwrk5EZGwSH
-Dsi4Av+9
+MEECAQAwEwYHKoZIzj0CAQYIKoZIzj0DAQcEJzAlAgEBBCCjo+vMGbV0J9LCokdb
+oNWqYk4JBIgCiysI99sUkMw2ng==
 -----END PRIVATE KEY-----`;
-
-  const issuerPrivateKey = await jose.importPKCS8(issuerPrivatePem, '')
-  // @ts-ignore
-  const issuerPublicKey = await jose.importX509(issuerPublicPem)
 
   const { privateKey: devicePrivateKey } = await jose.generateKeyPair("ES256");
   const verifierGeneratedNonce = "abcdefg";
@@ -47,7 +37,7 @@ Dsi4Av+9
   const responseUri = "http://localhost:4000/api/presentation_request/dc8999df-d6ea-4c84-9985-37a8b81a82ec/callback";
 
   /** -------- Generate MDL  ------- **/
-  const mdlBuffer = await generateMDL(issuerPrivateKey);
+  const mdlBuffer = await generateMDL(issuerCertificate, issuerPrivatePem);
   const mdoc = await MDOC.from(mdlBuffer);
 
   /** -------- Generate Device Response ------- **/
@@ -61,7 +51,7 @@ Dsi4Av+9
   console.log(deviceResponse.toString("hex"));
 
   /** -------- VERIFY ------- **/
-  const trustedCerts = [issuerPublicPem];
+  const trustedCerts = [issuerCertificate];
   const ephemeralReaderKey = Buffer.from("SKReader", "utf8");
   const encodedSessionTranscript = getSessionTranscriptBytes(
     { client_id: clientId, response_uri: responseUri, nonce: verifierGeneratedNonce },
@@ -84,8 +74,8 @@ Dsi4Av+9
   console.log("done");
 }
 
-async function generateMDL(privateKey) {
-  const builder = new MDOCBuilder(privateKey);
+async function generateMDL(issuerCertPem, issuerPubKeyPem) {
+  const builder = new MDOCBuilder(issuerCertPem, issuerPubKeyPem);
 
   await builder.addNameSpace("org.alex.test", {
     cool: true,

@@ -42,3 +42,8 @@ export function convertJWKtoJsonWebKey(jwk: JWK): JsonWebKey {
   };
   return key;
 }
+
+export function fromPEM(pem) {
+  const base64 = pem.replace(/-{5}(BEGIN|END) .*-{5}/gm, "").replace(/\s/gm, "");
+  return Buffer.from(base64, "base64");
+}

@@ -4,7 +4,7 @@ import * as jose from "jose";
 import cbor from "cbor";
 import cose from "cose-js";
 import { IssuerSignedItem } from "./types/MDOC";
-import { cborTagged, convertJWKtoJsonWebKey, maybeEncodeValue } from "./utils";
+import { cborTagged, convertJWKtoJsonWebKey, fromPEM, maybeEncodeValue } from "./utils";
 
 export class MDOCBuilder {
   public readonly defaultDocType = "org.iso.18013.5.1.mDL";
@@ -15,10 +15,12 @@ export class MDOCBuilder {
   private mapOfDigests: Record<string, any> = {};
   private mapOfHashes: Record<string, any> = {};
 
-  private readonly privateKey: jose.KeyLike;
+  issuerCertificatePem: string;
+  issuerPrivateKeyPem: string;
 
-  constructor(privateKey: jose.KeyLike) {
-    this.privateKey = privateKey;
+  constructor(issuerCertificatePem: string, issuerPrivateKeyPem: string) {
+    this.issuerCertificatePem = issuerCertificatePem;
+    this.issuerPrivateKeyPem = issuerPrivateKeyPem;
   }
 
   async addNameSpace(namespace: string, values: Record<string, any>) {
@@ -106,25 +108,11 @@ export class MDOCBuilder {
   }
 
   async buildMSO() {
-    const jwk = await jose.exportJWK(this.privateKey);
+    const issuerPrivateKey =  await jose.importPKCS8(this.issuerPrivateKeyPem, "");
+    const jwk = await jose.exportJWK(issuerPrivateKey);
+    const issuerPublicKeyBuffer = fromPEM(this.issuerCertificatePem)
 
-    // Temp, this is the same cert from verify-response.ts
-    const publicKeyPem = `-----BEGIN PRIVATE KEY-----
-  MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgv/5WLw0E6AS9XMt/
-  wd2SfKj/B9OVJo1kxATFVGiN9AegCgYIKoZIzj0DAQehRANCAAS79PM37JeW3TBh
-  k1i6jrrTXChfnbUyBPqesRkuvqY9o2j3t7LRl3nId7R1RUvl65VUMWwrk5EZGwSH
-  Dsi4Av+9
-  -----END PRIVATE KEY-----`;
-    const publicKeyPemString = 'MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgv/5WLw0E6AS9XMt/wd2SfKj/B9OVJo1kxATFVGiN9AegCgYIKoZIzj0DAQehRANCAAS79PM37JeW3TBhk1i6jrrTXChfnbUyBPqesRkuvqY9o2j3t7LRl3nId7R1RUvl65VUMWwrk5EZGwSHDsi4Av+9'
-    const issuerPublicKeyBuffer = Buffer.from(publicKeyPemString, "base64");
-    const { crv, x, y } = jwk;
-    const issuerPrivateKey = convertJWKtoJsonWebKey(jwk);
-    // const pkey = convertJWKtoJsonWebKey({ ...jwk, d: undefined });
-    // const deviceKey = encodeCoseKey(pkey);
 
-    // TODO: fix this. deviceKey is not right here
-    // @ts-ignore;
-    // const deviceKey = cose.common.TranslateKey({ crv, x, y });
     const utcNow = new Date();
     const expTime = new Date();
     expTime.setHours(expTime.getHours() + 5);
@@ -149,23 +137,12 @@ export class MDOCBuilder {
     };
 
     const msoCbor = cbor.encode(mso);
-
-    // const headers: cose.Headers = {
-    //   p: { alg: "ES256" },
-    //   u: { kid: "11" }, // ?? what should this be?
-    // };
-    // const signer: cose.sign.Signer = {
-    //   key: {
-    //     d: Buffer.from(jwk.d, "base64url"),
-    //   },
-    // };
-    // const signedCbor = await cose.sign.create(headers, msoCbor, signer);
-
+    
     const signOptions: SignOptions = {
       algorithm: CoseSignatureAlgorithmEnum.ES256,
       payload: msoCbor,
       signers: [],
-      privateKey: issuerPrivateKey,
+      privateKey: convertJWKtoJsonWebKey(jwk),
       protectedHeaders: {
         alg: "ES256",
       },
