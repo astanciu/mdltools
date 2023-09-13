@@ -4,7 +4,7 @@ import * as jose from "jose";
 import cbor from "cbor";
 import cose from "cose-js";
 import { IssuerSignedItem } from "./types/MDOC";
-import { cborTagged, convertJWKtoJsonWebKey, fromPEM, maybeEncodeValue } from "./utils";
+import { cborTagged, convertJWKtoJsonWebKey, fromPEM, jwk2COSE_Key, maybeEncodeValue } from "./utils";
 
 export class MDOCBuilder {
   public readonly defaultDocType = "org.iso.18013.5.1.mDL";
@@ -108,25 +108,27 @@ export class MDOCBuilder {
   }
 
   async buildMSO() {
-    const issuerPrivateKey =  await jose.importPKCS8(this.issuerPrivateKeyPem, "");
+    const issuerPrivateKey = await jose.importPKCS8(this.issuerPrivateKeyPem, "");
     const jwk = await jose.exportJWK(issuerPrivateKey);
-    const issuerPublicKeyBuffer = fromPEM(this.issuerCertificatePem)
-
+    const issuerPublicKeyBuffer = fromPEM(this.issuerCertificatePem);
 
     const utcNow = new Date();
     const expTime = new Date();
     expTime.setHours(expTime.getHours() + 5);
 
-    const signedDate = await cbor.encode(new cbor.Tagged(0, this.formatDate(utcNow)));
-    const validFromDate = await cbor.encode(new cbor.Tagged(0, this.formatDate(utcNow)));
-    const validUntilDate = await cbor.encode(new cbor.Tagged(0, this.formatDate(expTime)));
+    const signedDate = new cbor.Tagged(0, this.formatDate(utcNow));
+    const validFromDate = new cbor.Tagged(0, this.formatDate(utcNow));
+    const validUntilDate = new cbor.Tagged(0, this.formatDate(expTime));
 
+    const coseKeyMap = jwk2COSE_Key(jwk);
+
+    
     const mso = {
       version: "1.0",
       digestAlgorithm: this.digestAlgo,
       valueDigests: this.mapOfHashes,
       deviceKeyInfo: {
-        deviceKey: "deviceKey", // TODO: what is this?
+        deviceKey: coseKeyMap
       },
       docType: this.defaultDocType,
       validityInfo: {
@@ -138,27 +140,39 @@ export class MDOCBuilder {
 
     const msoCbor = cbor.encode(mso);
 
-    const pkThing = convertJWKtoJsonWebKey(jwk);
-    const signOptions: SignOptions = {
-      algorithm: CoseSignatureAlgorithmEnum.ES256,
-      payload: msoCbor,
-      signers: [
-        {
-          algorithm: CoseSignatureAlgorithmEnum.ES256,
-          privateKey: pkThing,
-        },
-      ],
-      // privateKey: convertJWKtoJsonWebKey(jwk),
-      protectedHeaders: {
-        alg: "ES256",
-      },
-      unprotectedHeaders: {
-        x5chain: [issuerPublicKeyBuffer],
-        kid: "11", // What is this ???
-      },
-      skipEncodingPayload: true,
+    // const pkThing = convertJWKtoJsonWebKey(jwk);
+    // const signOptions: SignOptions = {
+    //   algorithm: CoseSignatureAlgorithmEnum.ES256,
+    //   payload: msoCbor,
+    //   signers: [
+    //     // {
+    //     //   algorithm: CoseSignatureAlgorithmEnum.ES256,
+    //     //   privateKey: pkThing,
+    //     // },
+    //   ],
+    //   privateKey: pkThing,
+    //   protectedHeaders: {
+    //     alg: "ES256",
+    //   },
+    //   unprotectedHeaders: {
+    //     x5chain: [issuerPublicKeyBuffer],
+    //     kid: "11", // What is this ???
+    //   },
+    //   skipEncodingPayload: true,
+    // };
+    // const signedCbor = await sign(signOptions);
+
+    const headers: cose.Headers = {
+      p: { alg: "ES256" },
+      // @ts-ignore
+      u: { kid: "11", x5chain: [issuerPublicKeyBuffer] }, 
     };
-    const signedCbor = await sign(signOptions);
+    const signer: cose.sign.Signer = {
+      key: {
+        d: Buffer.from(jwk.d, "base64url"),
+      },
+    };
+    const signedCbor = await cose.sign.create(headers, msoCbor, signer);
 
     // signedCbor is a cbor of an object with shape {err, tag, value}. We only want the value
     // so we need to decode it and extract it

@@ -1,4 +1,7 @@
 import cbor from "cbor";
+import * as jose from "jose";
+import cosekey from "parse-cosekey";
+
 import { TAG_MAP } from "./config";
 import { JWK } from "jose";
 import { JsonWebKey, JwkEcCurve, JwkKty } from "@mattrglobal/cose";
@@ -39,7 +42,7 @@ export function convertJWKtoJsonWebKey(jwk: JWK): JsonWebKey {
     x: jwk.x,
     y: jwk.y,
     d: jwk.d,
-    kid: "11"
+    kid: "11",
   };
   return key;
 }
@@ -47,4 +50,10 @@ export function convertJWKtoJsonWebKey(jwk: JWK): JsonWebKey {
 export function fromPEM(pem) {
   const base64 = pem.replace(/-{5}(BEGIN|END) .*-{5}/gm, "").replace(/\s/gm, "");
   return Buffer.from(base64, "base64");
+}
+
+export function jwk2COSE_Key(jwk: jose.JWK) {
+  const coseMap = cosekey.KeyParser.jwk2cose(jwk);
+
+  return coseMap;
 }
