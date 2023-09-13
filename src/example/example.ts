@@ -44,6 +44,7 @@ async function go() {
   const cbor = await builder.save(); // Buffer of CBOR data
 
   const mdoc = await MDOC.from<CustomNameSpace>(cbor);
+  
   console.log(mdoc.family_name, mdoc.given_name);
   console.log(mdoc.registered);
   console.log(mdoc.attributes);

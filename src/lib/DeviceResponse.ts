@@ -1,10 +1,13 @@
 import * as jose from "jose";
+import cose from "cose-js";
 import { MDOC } from "./MDOC";
 import { IssuerSignedItem } from "./types/MDOC";
 import { InputDescriptor, PresentationDefinition } from "./types/PresentationDefinition";
 import { MDOCDocument } from "./types/MDOC";
-import { cborEncode, cborTagged, maybeEncodeValue } from "./utils";
-import { DeviceResponseType, DeviceSigned } from "./types/DeviceResponse";
+import { cborDecode, cborEncode, cborTagged, maybeEncodeValue } from "./utils";
+import { DeviceResponseType, DeviceSignature, DeviceSigned, DeviceSigned_Build } from "./types/DeviceResponse";
+import { read } from "fs";
+import { Tagged } from "cbor";
 
 const DOC_TYPE = "org.iso.18013.5.1.mDL";
 
@@ -31,36 +34,28 @@ export class DeviceResponse {
     return this;
   }
 
-  public usingDevicePriceKey(privateKey: jose.KeyLike) {
-    this.devicePrivateKey = privateKey;
-    return this;
-  }
-
-  public usingReaderPublicKey(publicKey: jose.KeyLike) {
-    this.readerPublicKey = publicKey;
-    return this;
-  }
-
   public usingHandover(handover: string[]) {
     this.handover = handover;
     return this;
   }
 
-  public MAC() {
+  public authenticateWithMac(readerPublicKey: jose.KeyLike, devicePrivateKey: jose.KeyLike) {
+    throw new Error("Not implemented");
+    this.readerPublicKey = readerPublicKey;
+    this.devicePrivateKey = devicePrivateKey;
     this.useMac = true;
     return this;
   }
 
-  public Sign() {
-    // return this;
-    throw new Error("Not implemented");
+  public authenticateWithSignature(devicePrivateKey: jose.KeyLike) {
+    this.devicePrivateKey = devicePrivateKey;
+    this.useMac = false;
+    return this;
   }
 
   public async generate() {
     if (!this.pd) throw new Error("Must provide a presentation definition with .usingPresentationDefinition()");
     if (!this.handover) throw new Error("Must provide handover data with .usingHandover()");
-    if (!this.devicePrivateKey) throw new Error("Must provide devicePrivateKey data with .usingDevicePrivateKey()");
-    if (!this.readerPublicKey) throw new Error("Must provide readerPublicKey data with .usingreaderPublicKey()");
 
     const inputDescriptor = this.pd.input_descriptors.find((id) => id.id === DOC_TYPE);
 
@@ -117,7 +112,7 @@ export class DeviceResponse {
     return cborTagged(24, await cborEncode({}));
   }
 
-  private async getdeviceSigned(docType: string): Promise<DeviceSigned> {
+  private async getdeviceSigned(docType: string): Promise<DeviceSigned_Build> {
     const sessionTranscript = [
       null, // deviceEngagementBytes
       null, // eReaderKeyBytes,
@@ -133,10 +128,11 @@ export class DeviceResponse {
 
     const { value: deviceAuthenticationBytes } = await cborTagged(24, await cborEncode(deviceAuthentication));
 
-    const deviceSigned = {
+    const deviceSigned: DeviceSigned_Build = {
       nameSpaces: await this.getDeviceNameSpaceBytes(),
-      // @ts-ignore
-      deviceAuth: this.useMac ? await this.getDeviceAuthMac(deviceAuthenticationBytes) : await this.getDeviceAuthSign(),
+      deviceAuth: this.useMac
+        ? await this.getDeviceAuthMac(deviceAuthenticationBytes)
+        : await this.getDeviceAuthSign(deviceAuthenticationBytes),
     };
 
     // @ts-ignore
@@ -144,18 +140,42 @@ export class DeviceResponse {
   }
 
   private async getDeviceAuthMac(data: Buffer) {
+    if (!this.devicePrivateKey) throw new Error("Missing devicePrivateKey");
+    if (!this.readerPublicKey) throw new Error("Missing readerPublicKey");
     // WIP here...
-    
+
     const ephemeralPrivateKey = ""; // derived from this.devicePrivateKey
     const ephemeralPublicKey = ""; // derived from this.readerPublicKey
-    
+
     return {
       deviceMac: "todo",
     };
   }
 
-  private async getDeviceAuthSign() {
-    throw new Error("getDeviceAuthSign() not implemented");
+  private async getDeviceAuthSign(cborData: Buffer): Promise<DeviceSignature> {
+    if (!this.devicePrivateKey) throw new Error("Missing devicePrivateKey");
+
+    const jwk = await jose.exportJWK(this.devicePrivateKey);
+    
+    const headers: cose.Headers = {
+      p: { alg: "ES256" },
+      u: { kid: "11" }, // ?? what should this be?
+    };
+
+    const signer: cose.sign.Signer = {
+      key: {
+        d: Buffer.from(jwk.d, "base64url"),
+      },
+    };
+
+    const signedCbor = await cose.sign.create(headers, cborData, signer);
+    // signedCbor is a cbor of an object with shape {err, tag, value}. We only want the value
+    // so we need to decode it and extract it
+    const decoded = await cborDecode(signedCbor);
+
+    return {
+      deviceSignature: decoded.value,
+    };
   }
 
   private async prepareNamespaces(id: InputDescriptor, mdocDocument: MDOCDocument) {
@@ -182,10 +202,10 @@ export class DeviceResponse {
    * the regex creates two groups with contents between "['" and "']"
    * the second entry in each group contains the result without the "'[" or "']"
    */
-  private prepareDigest(
+  private async prepareDigest(
     paths: string[],
     mdocDocument: MDOCDocument
-  ): { nameSpace: string; digest: IssuerSignedItem } | null {
+  ): Promise<{ nameSpace: string; digest: Tagged } | null> {
     for (const path of paths) {
       const [[_1, nameSpace], [_2, elementIdentifier]] = [...path.matchAll(/\['(.*?)'\]/g)];
       if (!nameSpace) throw new Error(`Failed to parse namespace from path "${path}"`);
@@ -196,10 +216,17 @@ export class DeviceResponse {
       );
 
       if (digest) {
+        const digestWithEncodedValue = {
+          ...digest,
+          elementValue: maybeEncodeValue(digest.elementIdentifier, digest.elementValue),
+        };
+
+        const encodedDigest = cborTagged(24, await cborEncode(digestWithEncodedValue));
+
         return {
           nameSpace,
           // encode the value if necessary
-          digest: { ...digest, elementValue: maybeEncodeValue(digest.elementIdentifier, digest.elementValue) },
+          digest: encodedDigest,
         };
       }
     }

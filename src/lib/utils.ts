@@ -1,5 +1,7 @@
 import cbor from "cbor";
 import { TAG_MAP } from "./config";
+import { JWK } from "jose";
+import { JsonWebKey, JwkEcCurve, JwkKty } from "@mattrglobal/cose";
 
 export function maybeEncodeValue(key: string, value: any): any {
   // only dates of type 'full-date' need to be tagged as 1004
@@ -15,7 +17,7 @@ export function maybeEncodeValue(key: string, value: any): any {
 export async function cborEncode(data: any) {
   return cbor.encode(data);
 }
-export async function cborTagged(tag: number, data: any) {
+export function cborTagged(tag: number, data: any) {
   return new cbor.Tagged(tag, data);
 }
 
@@ -25,4 +27,18 @@ export async function cborDecode(data: any) {
     1004: (dateString) => dateString,
   };
   return cbor.decode(data, { tags: extraTags });
+}
+
+export function convertJWKtoJsonWebKey(jwk: JWK): JsonWebKey {
+  const kty = JwkKty[jwk.kty];
+  const crv = JwkEcCurve[jwk.crv.replace("-", "")];
+
+  const key: JsonWebKey = {
+    kty,
+    crv,
+    x: jwk.x,
+    y: jwk.y,
+    d: jwk.d,
+  };
+  return key;
 }
