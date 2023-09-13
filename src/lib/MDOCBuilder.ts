@@ -137,12 +137,18 @@ export class MDOCBuilder {
     };
 
     const msoCbor = cbor.encode(mso);
-    
+
+    const pkThing = convertJWKtoJsonWebKey(jwk);
     const signOptions: SignOptions = {
       algorithm: CoseSignatureAlgorithmEnum.ES256,
       payload: msoCbor,
-      signers: [],
-      privateKey: convertJWKtoJsonWebKey(jwk),
+      signers: [
+        {
+          algorithm: CoseSignatureAlgorithmEnum.ES256,
+          privateKey: pkThing,
+        },
+      ],
+      // privateKey: convertJWKtoJsonWebKey(jwk),
       protectedHeaders: {
         alg: "ES256",
       },

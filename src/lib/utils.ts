@@ -39,6 +39,7 @@ export function convertJWKtoJsonWebKey(jwk: JWK): JsonWebKey {
     x: jwk.x,
     y: jwk.y,
     d: jwk.d,
+    kid: "11"
   };
   return key;
 }
