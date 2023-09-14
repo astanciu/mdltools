@@ -4,12 +4,18 @@ import * as jose from "jose";
 import cbor from "cbor";
 import cose from "cose-js";
 import { IssuerSignedItem } from "./types/MDOC";
-import { cborTagged, convertJWKtoJsonWebKey, fromPEM, jwk2COSE_Key, maybeEncodeValue } from "./utils";
+import { cborEncode, cborTagged, convertJWKtoJsonWebKey, fromPEM, jwk2COSE_Key, maybeEncodeValue } from "./utils";
+
+const DIGEST_ALGS = {
+  "SHA-256": "sha256",
+  "SHA-384": "sha384",
+  "SHA-512": "sha512",
+} as { [key: string]: string };
 
 export class MDOCBuilder {
   public readonly defaultDocType = "org.iso.18013.5.1.mDL";
   public readonly defaultNamespace = "org.iso.18013.5.1";
-  public readonly digestAlgo = "sha256";
+  public readonly digestAlgo = "SHA-256";
 
   public namespaces = new Set<string>();
   private mapOfDigests: Record<string, any> = {};
@@ -29,13 +35,14 @@ export class MDOCBuilder {
     }
     this.namespaces.add(namespace);
     this.mapOfDigests[namespace] = {};
-    this.mapOfHashes[namespace] = {};
+    this.mapOfHashes[namespace] = new Map<number, Buffer>();
     let digestCounter = 0;
 
     for (const [key, value] of Object.entries(values)) {
-      const { digest, hash } = await this.processAttribute(key, value, digestCounter);
-      this.mapOfDigests[namespace][digestCounter] = digest;
-      this.mapOfHashes[namespace][digestCounter] = hash;
+      const { itemBytes, hash } = await this.processAttribute(key, value, digestCounter);
+
+      this.mapOfDigests[namespace][digestCounter] = itemBytes;
+      this.mapOfHashes[namespace].set(digestCounter, hash);
       digestCounter++;
     }
   }
@@ -45,9 +52,8 @@ export class MDOCBuilder {
     const nameSpaces = {};
     for (const ns of this.namespaces.values()) {
       nameSpaces[ns] = [];
-      for (const [key, val] of Object.entries(this.mapOfDigests[ns])) {
-        const data = await cborTagged(24, await cbor.encode(val));
-        nameSpaces[ns].push(data);
+      for (const [_, val] of Object.entries(this.mapOfDigests[ns])) {
+        nameSpaces[ns].push(val);
       }
     }
     const mdl = {
@@ -75,7 +81,7 @@ export class MDOCBuilder {
     key: string,
     value: any,
     digestID: number
-  ): Promise<{ digest: IssuerSignedItem; hash: Buffer }> {
+  ): Promise<{ itemBytes: cbor.Tagged; hash: Buffer }> {
     const salt = randomBytes(32);
     const encodedValue = maybeEncodeValue(key, value);
 
@@ -86,14 +92,15 @@ export class MDOCBuilder {
       elementValue: encodedValue,
     };
 
-    const hash = await this.hashDigest(digest);
-    return { digest, hash };
+    const itemBytes = await cborTagged(24, await cbor.encode(digest));
+
+    const hash = await this.hashDigest(itemBytes);
+    return { itemBytes, hash };
   }
 
-  async hashDigest(digest: IssuerSignedItem): Promise<Buffer> {
-    const enc = await cbor.encode(digest);
-    const dataToHash = await cbor.encode(new cbor.Tagged(24, enc));
-    const sha256Hash = createHash(this.digestAlgo).update(dataToHash).digest();
+  async hashDigest(itemBytes: cbor.Tagged): Promise<Buffer> {
+    const encoded = await cbor.encode(itemBytes);
+    const sha256Hash = createHash(DIGEST_ALGS[this.digestAlgo]).update(encoded).digest();
 
     return sha256Hash;
   }
@@ -122,13 +129,13 @@ export class MDOCBuilder {
 
     const coseKeyMap = jwk2COSE_Key(jwk);
 
-    
     const mso = {
       version: "1.0",
       digestAlgorithm: this.digestAlgo,
+      // valueDigests: cborTagged(24, await cborEncode(this.mapOfHashes)),
       valueDigests: this.mapOfHashes,
       deviceKeyInfo: {
-        deviceKey: coseKeyMap
+        deviceKey: coseKeyMap,
       },
       docType: this.defaultDocType,
       validityInfo: {
@@ -138,34 +145,12 @@ export class MDOCBuilder {
       },
     };
 
-    const msoCbor = cbor.encode(mso);
-
-    // const pkThing = convertJWKtoJsonWebKey(jwk);
-    // const signOptions: SignOptions = {
-    //   algorithm: CoseSignatureAlgorithmEnum.ES256,
-    //   payload: msoCbor,
-    //   signers: [
-    //     // {
-    //     //   algorithm: CoseSignatureAlgorithmEnum.ES256,
-    //     //   privateKey: pkThing,
-    //     // },
-    //   ],
-    //   privateKey: pkThing,
-    //   protectedHeaders: {
-    //     alg: "ES256",
-    //   },
-    //   unprotectedHeaders: {
-    //     x5chain: [issuerPublicKeyBuffer],
-    //     kid: "11", // What is this ???
-    //   },
-    //   skipEncodingPayload: true,
-    // };
-    // const signedCbor = await sign(signOptions);
+    const msoCbor = await cborEncode(cborTagged(24, await cborEncode(mso)));
 
     const headers: cose.Headers = {
       p: { alg: "ES256" },
       // @ts-ignore
-      u: { kid: "11", x5chain: [issuerPublicKeyBuffer] }, 
+      u: { kid: "11", x5chain: [issuerPublicKeyBuffer] },
     };
     const signer: cose.sign.Signer = {
       key: {

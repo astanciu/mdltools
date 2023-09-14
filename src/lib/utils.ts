@@ -57,3 +57,5 @@ export function jwk2COSE_Key(jwk: jose.JWK) {
 
   return coseMap;
 }
+
+
