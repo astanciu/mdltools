@@ -17,7 +17,7 @@ export function maybeEncodeValue(key: string, value: any): any {
 }
 
 // Do all CBOR operations in one spot so we can change libs easily
-export async function cborEncode(data: any) {
+export function cborEncode(data: any) {
   return cbor.encode(data);
 }
 export function cborTagged(tag: number, data: any) {

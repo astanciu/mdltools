@@ -23,10 +23,12 @@ export class MDOCBuilder {
 
   issuerCertificatePem: string;
   issuerPrivateKeyPem: string;
+  devicePublicKey: jose.KeyLike;
 
-  constructor(issuerCertificatePem: string, issuerPrivateKeyPem: string) {
+  constructor(issuerCertificatePem: string, issuerPrivateKeyPem: string, devicePublicKey: jose.KeyLike) {
     this.issuerCertificatePem = issuerCertificatePem;
     this.issuerPrivateKeyPem = issuerPrivateKeyPem;
+    this.devicePublicKey = devicePublicKey;
   }
 
   async addNameSpace(namespace: string, values: Record<string, any>) {
@@ -115,8 +117,10 @@ export class MDOCBuilder {
   }
 
   async buildMSO() {
-    const issuerPrivateKey = await jose.importPKCS8(this.issuerPrivateKeyPem, "");
-    const jwk = await jose.exportJWK(issuerPrivateKey);
+  
+    const devicePrivateKeyJwk = await jose.exportJWK(await jose.importPKCS8(this.issuerPrivateKeyPem, ""));
+    const devicePublicKeyJwk = await jose.exportJWK(this.devicePublicKey);
+
     const issuerPublicKeyBuffer = fromPEM(this.issuerCertificatePem);
 
     const utcNow = new Date();
@@ -127,7 +131,7 @@ export class MDOCBuilder {
     const validFromDate = new cbor.Tagged(0, this.formatDate(utcNow));
     const validUntilDate = new cbor.Tagged(0, this.formatDate(expTime));
 
-    const coseKeyMap = jwk2COSE_Key(jwk);
+    const deviceKey = jwk2COSE_Key(devicePublicKeyJwk);
 
     const mso = {
       version: "1.0",
@@ -135,7 +139,7 @@ export class MDOCBuilder {
       // valueDigests: cborTagged(24, await cborEncode(this.mapOfHashes)),
       valueDigests: this.mapOfHashes,
       deviceKeyInfo: {
-        deviceKey: coseKeyMap,
+        deviceKey: deviceKey,
       },
       docType: this.defaultDocType,
       validityInfo: {
@@ -154,7 +158,7 @@ export class MDOCBuilder {
     };
     const signer: cose.sign.Signer = {
       key: {
-        d: Buffer.from(jwk.d, "base64url"),
+        d: Buffer.from(devicePrivateKeyJwk.d, "base64url"),
       },
     };
     const signedCbor = await cose.sign.create(headers, msoCbor, signer);

@@ -125,9 +125,19 @@ export class DeviceResponse {
       docType,
       await this.getDeviceNameSpaceBytes(),
     ];
+    const devicenameSpaceBytes = await this.getDeviceNameSpaceBytes();
+    // const { value: deviceAuthenticationBytes } = await cborTagged(24, await cborEncode(deviceAuthentication));
+    // const deviceAuthenticationBytes = await this.calculateDeviceAutenticationBytes(
+    //   sessionTranscript,
+    //   docType,
+    //   deviceNSBytes
+    // );
 
-    const { value: deviceAuthenticationBytes } = await cborTagged(24, await cborEncode(deviceAuthentication));
+    const bytes = cborEncode(["DeviceAuthentication", sessionTranscript, docType, devicenameSpaceBytes])
+    const deviceAuthenticationBytes = new Tagged(24, bytes).value
 
+    const debug = deviceAuthenticationBytes.toString("hex");
+    console.log('gen dab: ', debug)
     const deviceSigned: DeviceSigned_Build = {
       nameSpaces: await this.getDeviceNameSpaceBytes(),
       deviceAuth: this.useMac
@@ -139,6 +149,13 @@ export class DeviceResponse {
     return deviceSigned;
   }
 
+  private calculateDeviceAutenticationBytes(
+    sessionTranscript: any[],
+    docType: string,
+    nameSpaces: Tagged
+  ): Buffer {
+    return cborEncode(new Tagged(24, cborEncode(["DeviceAuthentication", sessionTranscript, docType, nameSpaces])));
+  }
   private async getDeviceAuthMac(data: Buffer) {
     if (!this.devicePrivateKey) throw new Error("Missing devicePrivateKey");
     if (!this.readerPublicKey) throw new Error("Missing readerPublicKey");
@@ -156,7 +173,7 @@ export class DeviceResponse {
     if (!this.devicePrivateKey) throw new Error("Missing devicePrivateKey");
 
     const jwk = await jose.exportJWK(this.devicePrivateKey);
-    
+
     const headers: cose.Headers = {
       p: { alg: "ES256" },
       u: { kid: "11" }, // ?? what should this be?
