@@ -40,6 +40,10 @@ export const PRESENTATION_DEFINITION_1 = {
             intent_to_retain: false,
           },
           {
+            path: ["$['org.iso.18013.5.1']['issuing_jurisdiction']"],
+            intent_to_retain: false,
+          },
+          {
             path: ["$['org.iso.18013.5.1']['document_number']"],
             intent_to_retain: false,
           },
