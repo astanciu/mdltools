@@ -146,7 +146,7 @@ export class MDOCBuilder {
       },
     };
 
-    const msoCbor = cborTagged(24, cborEncode(mso)).value;
+    const msoCbor = cborTagged(24, Buffer.from(cborEncode(mso))).value;
     const dec = cborDecode(msoCbor);
 
     const headers: cose.Headers = {

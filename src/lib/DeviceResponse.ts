@@ -166,7 +166,7 @@ export class DeviceResponse {
       },
     };
 
-    const signedCbor = await cose.sign.create(headers, cborData, signer);
+    const signedCbor = await cose.sign.create(headers, Buffer.from(cborData), signer);
     // signedCbor is a cbor of an object with shape {err, tag, value}. We only want the value
     // so we need to decode it and extract it
     const decoded = await cborDecode(signedCbor);

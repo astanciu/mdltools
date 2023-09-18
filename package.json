@@ -10,14 +10,12 @@
   "dependencies": {
     "@mattrglobal/cose": "^2.3.0",
     "cbor-web": "^9.0.1",
-    "cbor-x": "^1.5.4",
     "cose-js": "https://github.com/oneproof-inc/cose-js",
     "jose": "^4.14.6",
     "parse-cosekey": "^1.0.2",
     "remove": "^0.1.5"
   },
   "devDependencies": {
-    "@types/cbor": "^6.0.0",
     "@types/cose-js": "^0.8.1",
     "@types/node": "^20.5.9",
     "esbuild": "^0.19.2",
