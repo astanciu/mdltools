@@ -1,4 +1,4 @@
-import { Tagged, decode, encode } from "cbor";
+import { Tagged, decode, encode } from "cbor-web";
 export { Tagged } from "cbor";
 import * as jose from "jose";
 import cosekey from "parse-cosekey";
