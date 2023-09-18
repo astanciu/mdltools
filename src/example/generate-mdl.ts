@@ -1,6 +1,7 @@
 import * as jose from "jose";
 
 import { MDOC, MDOCBuilder } from "../MDLTools";
+import { ISSUER_CERTIFICATE, ISSUER_CERTIFICATE_PRIVATE_KEY } from "./config";
 
 go().catch((err) => {
   console.log("Oops...");
@@ -8,9 +9,11 @@ go().catch((err) => {
 });
 
 async function go() {
+  const issuerCertificate = ISSUER_CERTIFICATE;
+  const issuerPrivatePem = ISSUER_CERTIFICATE_PRIVATE_KEY;
   const { privateKey } = await jose.generateKeyPair("ES256");
 
-  const builder = new MDOCBuilder(privateKey);
+  const builder = new MDOCBuilder(issuerCertificate, issuerPrivatePem, privateKey);
 
   await builder.addNameSpace("org.iso.18013.5.1", {
     family_name: "Smith",
@@ -41,10 +44,10 @@ async function go() {
     registered: true,
   });
 
-  const cbor = await builder.save(); // Buffer of CBOR data
+  const mdl = await builder.save(); // Buffer of CBOR data
 
-  const mdoc = await MDOC.from<CustomNameSpace>(cbor);
-  
+  const mdoc = await MDOC.from<CustomNameSpace>(mdl);
+
   console.log(mdoc.family_name, mdoc.given_name);
   console.log(mdoc.registered);
   console.log(mdoc.attributes);

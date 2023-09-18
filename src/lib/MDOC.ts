@@ -1,4 +1,3 @@
-import cbor from "cbor";
 import { MDLAttributes } from "./types/types";
 import { IssuerSignedItem, MDLDoc } from "./types/MDOC";
 import { MDL_FIELDS } from "./config";

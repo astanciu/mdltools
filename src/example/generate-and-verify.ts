@@ -3,8 +3,8 @@ import * as jose from "jose";
 import cbor from "cbor";
 import { MDOC, MDOCBuilder } from "../MDLTools";
 import { DeviceResponse } from "../lib/DeviceResponse";
-import { PRESENTATION_DEFINITION_1 } from "./config";
-
+import { ISSUER_CERTIFICATE, ISSUER_CERTIFICATE_PRIVATE_KEY, PRESENTATION_DEFINITION_1 } from "./config";
+import { cborEncode, cborTagged } from "../lib/utils";
 
 main().catch((e) => {
   console.log("FAILED:");
@@ -13,26 +13,8 @@ main().catch((e) => {
 
 async function main() {
   /** -------- Variables  ------- **/
-  const issuerCertificate = `-----BEGIN CERTIFICATE-----
-MIICKjCCAdCgAwIBAgIUV8bM0wi95D7KN0TyqHE42ru4hOgwCgYIKoZIzj0EAwIw
-UzELMAkGA1UEBhMCVVMxETAPBgNVBAgMCE5ldyBZb3JrMQ8wDQYDVQQHDAZBbGJh
-bnkxDzANBgNVBAoMBk5ZIERNVjEPMA0GA1UECwwGTlkgRE1WMB4XDTIzMDkxNDE0
-NTUxOFoXDTMzMDkxMTE0NTUxOFowUzELMAkGA1UEBhMCVVMxETAPBgNVBAgMCE5l
-dyBZb3JrMQ8wDQYDVQQHDAZBbGJhbnkxDzANBgNVBAoMBk5ZIERNVjEPMA0GA1UE
-CwwGTlkgRE1WMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEiTwtg0eQbcbNabf2
-Nq9L/VM/lhhPCq2s0Qgw2kRx29tgrBcNHPxTT64tnc1Ij3dH/fl42SXqMenpCDw4
-K6ntU6OBgTB/MB0GA1UdDgQWBBSrbS4DuR1JIkAzj7zK3v2TM+r2xzAfBgNVHSME
-GDAWgBSrbS4DuR1JIkAzj7zK3v2TM+r2xzAPBgNVHRMBAf8EBTADAQH/MCwGCWCG
-SAGG+EIBDQQfFh1PcGVuU1NMIEdlbmVyYXRlZCBDZXJ0aWZpY2F0ZTAKBggqhkjO
-PQQDAgNIADBFAiAJ/Qyrl7A+ePZOdNfc7ohmjEdqCvxaos6//gfTvncuqQIhANo4
-q8mKCA9J8k/+zh//yKbN1bLAtdqPx7dnrDqV3Lg+
------END CERTIFICATE-----`;
-
-  const issuerPrivatePem = `-----BEGIN PRIVATE KEY-----
-MEECAQAwEwYHKoZIzj0CAQYIKoZIzj0DAQcEJzAlAgEBBCCjo+vMGbV0J9LCokdb
-oNWqYk4JBIgCiysI99sUkMw2ng==
------END PRIVATE KEY-----`;
-
+  const issuerCertificate = ISSUER_CERTIFICATE;
+  const issuerPrivatePem = ISSUER_CERTIFICATE_PRIVATE_KEY;
   const { privateKey: devicePrivateKey, publicKey: devicePublicKey } = await jose.generateKeyPair("ES256");
   const verifierGeneratedNonce = "abcdefg";
   const mdocGeneratedNonce = "123456";
@@ -51,7 +33,7 @@ oNWqYk4JBIgCiysI99sUkMw2ng==
     .authenticateWithSignature(devicePrivateKey)
     .generate();
 
-  console.log(deviceResponse.toString('hex'))
+  console.log(deviceResponse.toString("hex"));
 
   /** -------- VERIFY ------- **/
   const trustedCerts = [issuerCertificate];
@@ -111,10 +93,10 @@ async function generateMDL(issuerCertPem, issuerPubKeyPem, devicePublicKey) {
 }
 
 const getSessionTranscriptBytes = ({ client_id: clientId, response_uri: responseUri, nonce }, mdocGeneratedNonce) =>
-  cbor.encode(
-    new cbor.Tagged(
+  cborEncode(
+    cborTagged(
       24,
-      cbor.encode([
+      cborEncode([
         null, // DeviceEngagementBytes
         null, // EReaderKeyBytes
         [mdocGeneratedNonce, clientId, responseUri, nonce], // Handover = OID4VPHandover

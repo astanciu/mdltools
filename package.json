@@ -2,8 +2,8 @@
   "name": "mdltools",
   "packageManager": "yarn@3.6.3",
   "scripts": {
-    "example": "yarn ts-node src/example/example.ts",
-    "generate": "yarn ts-node src/example/generate.ts",
+    "full": "yarn ts-node src/example/generate-and-verify.ts",
+    "generate": "yarn ts-node src/example/generate-mdl.ts",
     "mdoc": "yarn ts-node src/example/mdoc.ts",
     "build": "rimraf ./build && tsc"
   },
