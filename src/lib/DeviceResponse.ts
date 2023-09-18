@@ -1,13 +1,10 @@
 import * as jose from "jose";
 import cose from "cose-js";
 import { MDOC } from "./MDOC";
-import { IssuerSignedItem } from "./types/MDOC";
 import { InputDescriptor, PresentationDefinition } from "./types/PresentationDefinition";
 import { MDOCDocument } from "./types/MDOC";
-import { cborDecode, cborEncode, cborTagged, maybeEncodeValue } from "./utils";
+import { cborDecode, cborEncode, cborTagged, maybeEncodeValue, Tagged } from "./utils";
 import { DeviceResponseType, DeviceSignature, DeviceSigned, DeviceSigned_Build } from "./types/DeviceResponse";
-import { read } from "fs";
-import { Tagged } from "cbor";
 
 const DOC_TYPE = "org.iso.18013.5.1.mDL";
 
@@ -126,7 +123,7 @@ export class DeviceResponse {
       await this.getDeviceNameSpaceBytes(),
     ];
 
-    const deviceAuthenticationBytes = new Tagged(24, cborEncode(deviceAuthentication)).value;
+    const deviceAuthenticationBytes = cborTagged(24, cborEncode(deviceAuthentication)).value;
 
     const deviceSigned: DeviceSigned_Build = {
       nameSpaces: await this.getDeviceNameSpaceBytes(),
@@ -206,6 +203,7 @@ export class DeviceResponse {
   private async prepareDigest(
     paths: string[],
     mdocDocument: MDOCDocument
+    // TODO: add Tagged type back in
   ): Promise<{ nameSpace: string; digest: Tagged } | null> {
     for (const path of paths) {
       const [[_1, nameSpace], [_2, elementIdentifier]] = [...path.matchAll(/\['(.*?)'\]/g)];
@@ -222,7 +220,7 @@ export class DeviceResponse {
           elementValue: maybeEncodeValue(digest.elementIdentifier, digest.elementValue),
         };
 
-        const encodedDigest = cborTagged(24, await cborEncode(digestWithEncodedValue));
+        const encodedDigest = cborTagged(24, cborEncode(digestWithEncodedValue));
 
         return {
           nameSpace,

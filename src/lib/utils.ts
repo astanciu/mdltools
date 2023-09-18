@@ -1,4 +1,5 @@
-import cbor from "cbor";
+import { Tagged, decode, encode } from "cbor";
+export { Tagged } from "cbor";
 import * as jose from "jose";
 import cosekey from "parse-cosekey";
 
@@ -11,25 +12,25 @@ export function maybeEncodeValue(key: string, value: any): any {
   const tag = TAG_MAP[key];
   if (!tag) return value;
 
-  if (tag === 1004) return new cbor.Tagged(1004, value);
+  if (tag === 1004) return cborTagged(1004, value);
 
   throw new Error(`Unknown tag "${tag}"`);
 }
 
 // Do all CBOR operations in one spot so we can change libs easily
 export function cborEncode(data: any) {
-  return cbor.encode(data);
+  return encode(data);
 }
 export function cborTagged(tag: number, data: any) {
-  return new cbor.Tagged(tag, data);
+  return new Tagged(tag, data);
 }
 
-export async function cborDecode(data: any) {
+export function cborDecode(data: any) {
   const extraTags = {
-    24: (value) => cbor.decode(value, { tags: extraTags }),
+    24: (value) => decode(value, { tags: extraTags }),
     1004: (dateString) => dateString,
   };
-  return cbor.decode(data, { tags: extraTags });
+  return decode(data, { tags: extraTags });
 }
 
 export function convertJWKtoJsonWebKey(jwk: JWK): JsonWebKey {
@@ -57,5 +58,3 @@ export function jwk2COSE_Key(jwk: jose.JWK) {
 
   return coseMap;
 }
-
-

@@ -1,11 +1,10 @@
 import { DeviceResponseVerifier } from "mdl";
 import * as jose from "jose";
 import cbor from "cbor";
-
 import { MDOC, MDOCBuilder } from "../MDLTools";
 import { DeviceResponse } from "../lib/DeviceResponse";
 import { PRESENTATION_DEFINITION_1 } from "./config";
-import { cborDecode } from "../lib/utils";
+
 
 main().catch((e) => {
   console.log("FAILED:");
@@ -51,6 +50,8 @@ oNWqYk4JBIgCiysI99sUkMw2ng==
     .usingHandover([mdocGeneratedNonce, clientId, responseUri, verifierGeneratedNonce])
     .authenticateWithSignature(devicePrivateKey)
     .generate();
+
+  console.log(deviceResponse.toString('hex'))
 
   /** -------- VERIFY ------- **/
   const trustedCerts = [issuerCertificate];
