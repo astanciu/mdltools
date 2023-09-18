@@ -1,9 +1,8 @@
 import { DeviceResponseVerifier } from "mdl";
 import * as jose from "jose";
-import cbor from "cbor";
 import { MDOC, MDOCBuilder } from "../MDLTools";
 import { DeviceResponse } from "../lib/DeviceResponse";
-import { ISSUER_CERTIFICATE, ISSUER_CERTIFICATE_PRIVATE_KEY, PRESENTATION_DEFINITION_1 } from "./config";
+import { DEVICE_JWK, ISSUER_CERTIFICATE, ISSUER_CERTIFICATE_PRIVATE_KEY, PRESENTATION_DEFINITION_1 } from "./config";
 import { cborEncode, cborTagged } from "../lib/utils";
 
 main().catch((e) => {
@@ -15,7 +14,10 @@ async function main() {
   /** -------- Variables  ------- **/
   const issuerCertificate = ISSUER_CERTIFICATE;
   const issuerPrivatePem = ISSUER_CERTIFICATE_PRIVATE_KEY;
-  const { privateKey: devicePrivateKey, publicKey: devicePublicKey } = await jose.generateKeyPair("ES256");
+
+  // const { privateKey: devicePrivateKey, publicKey: devicePublicKey } = await jose.generateKeyPair("ES256");
+  const devicePrivateKey = await jose.importJWK(DEVICE_JWK);
+  const devicePublicKey = await jose.importJWK({ ...DEVICE_JWK, d: undefined });
   const verifierGeneratedNonce = "abcdefg";
   const mdocGeneratedNonce = "123456";
   const clientId = "Cq1anPb8vZU5j5C0d7hcsbuJLBpIawUJIDQRi2Ebwb4";
@@ -30,10 +32,8 @@ async function main() {
   let deviceResponse = await DeviceResponse.from(mdoc)
     .usingPresentationDefinition(PRESENTATION_DEFINITION_1)
     .usingHandover([mdocGeneratedNonce, clientId, responseUri, verifierGeneratedNonce])
-    .authenticateWithSignature(devicePrivateKey)
+    .authenticateWithSignature(devicePrivateKey as jose.KeyLike)
     .generate();
-
-  console.log(deviceResponse.toString("hex"));
 
   /** -------- VERIFY ------- **/
   const trustedCerts = [issuerCertificate];
@@ -55,8 +55,6 @@ async function main() {
   }
 
   console.log("Valid: ", isValid);
-
-  console.log("done");
 }
 
 async function generateMDL(issuerCertPem, issuerPubKeyPem, devicePublicKey) {
