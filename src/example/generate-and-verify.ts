@@ -3,7 +3,7 @@ import * as jose from "jose";
 import { MDOC, MDOCBuilder } from "../MDLTools";
 import { DeviceResponse } from "../lib/DeviceResponse";
 import { DEVICE_JWK, ISSUER_CERTIFICATE, ISSUER_CERTIFICATE_PRIVATE_KEY, PRESENTATION_DEFINITION_1 } from "./config";
-import { cborEncode, cborTagged } from "../lib/utils";
+import { cborEncode, DataItem } from "../lib/cbor";
 
 main().catch((e) => {
   console.log("FAILED:");
@@ -26,6 +26,8 @@ async function main() {
   /** -------- Generate MDL  ------- **/
   const mdlBuffer = await generateMDL(issuerCertificate, issuerPrivatePem, devicePublicKey);
   const mdoc = await MDOC.from(mdlBuffer);
+  console.log("MDOC:");
+  console.log(mdlBuffer.toString("hex"));
 
   /** -------- Generate Device Response ------- **/
 
@@ -34,7 +36,8 @@ async function main() {
     .usingHandover([mdocGeneratedNonce, clientId, responseUri, verifierGeneratedNonce])
     .authenticateWithSignature(devicePrivateKey as jose.KeyLike)
     .generate();
-
+  console.log("deviceResponse:");
+  console.log(deviceResponse.toString("hex"));
   /** -------- VERIFY ------- **/
   const trustedCerts = [issuerCertificate];
   const ephemeralReaderKey = Buffer.from("SKReader", "utf8");
@@ -92,12 +95,9 @@ async function generateMDL(issuerCertPem, issuerPubKeyPem, devicePublicKey) {
 
 const getSessionTranscriptBytes = ({ client_id: clientId, response_uri: responseUri, nonce }, mdocGeneratedNonce) =>
   cborEncode(
-    cborTagged(
-      24,
-      cborEncode([
-        null, // DeviceEngagementBytes
-        null, // EReaderKeyBytes
-        [mdocGeneratedNonce, clientId, responseUri, nonce], // Handover = OID4VPHandover
-      ])
-    )
+    DataItem.fromData([
+      null, // DeviceEngagementBytes
+      null, // EReaderKeyBytes
+      [mdocGeneratedNonce, clientId, responseUri, nonce], // Handover = OID4VPHandover
+    ])
   );

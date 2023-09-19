@@ -1,7 +1,7 @@
 {
   "name": "mdltools",
   "packageManager": "yarn@3.6.3",
-  "main": "./build/mdltools.js",
+  "main": "build/mdltools.js",
   "scripts": {
     "full": "yarn ts-node src/example/generate-and-verify.ts",
     "generate": "yarn ts-node src/example/generate-mdl.ts",
@@ -11,6 +11,7 @@
   "dependencies": {
     "@mattrglobal/cose": "^2.3.0",
     "cbor-web": "^9.0.1",
+    "cbor-x": "^1.5.4",
     "cose-js": "https://github.com/oneproof-inc/cose-js",
     "jose": "^4.14.6",
     "parse-cosekey": "^1.0.2",

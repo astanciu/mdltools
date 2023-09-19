@@ -1,18 +1,18 @@
 import { MDLAttributes } from "./types/types";
-import { IssuerSignedItem, MDLDoc } from "./types/MDOC";
+import { CBORMap } from "./types/MDOC";
 import { MDL_FIELDS } from "./config";
-import { cborDecode } from "./utils";
+import { DataItem, cborDecode } from "./cbor";
 
 const blocker = {};
 
 export class MDOC {
   private defaultNamespace = "org.iso.18013.5.1";
-  public readonly mdoc: MDLDoc;
+  public readonly mdoc: CBORMap;
   public attributes: Record<string, any> = {};
 
   static async from<T>(data: string | Buffer) {
     const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data, "hex");
-    const mdoc = new MDOC(await MDOC.decode(buffer), blocker);
+    const mdoc = new MDOC(MDOC.decode(buffer), blocker);
 
     const proxy = new Proxy<MDOC>(mdoc, {
       get(target: MDOC, prop: string, receiver: any) {
@@ -32,13 +32,13 @@ export class MDOC {
     return proxy as MDOC & MDLAttributes & T;
   }
 
-  static async decode(data: Buffer) {
-    const mdoc: MDLDoc = await cborDecode(data)
+  static decode(data: Buffer) {
+    const mdoc: CBORMap = cborDecode(data);
 
     return mdoc;
   }
 
-  constructor(mdoc: MDLDoc, b) {
+  constructor(mdoc: CBORMap, b) {
     if (b !== blocker) throw new Error("Cannot use constructor directly. Use MDOC.from()");
     this.mdoc = mdoc;
     this.buildAttributeMap();
@@ -47,13 +47,17 @@ export class MDOC {
   // TODO: how do we handle multiple mdoc.documents, if each one has the default namespace?
   private buildAttributeMap() {
     // First, get teh default namespace ones
-    const nsAttrs = this.mdoc?.documents?.[0]?.issuerSigned?.nameSpaces[this.defaultNamespace];
+    const nsAttrs = this.mdoc
+      ?.get("documents")?.[0]
+      ?.get("issuerSigned")
+      ?.get("nameSpaces")
+      ?.get(this.defaultNamespace);
     if (!nsAttrs) throw new Error(`Document does not contain the core namespace "${this.defaultNamespace}"`);
     this.loadAttributes(this.defaultNamespace);
 
     // Then get any other namespaces.
     // This makes the map somewhat ordered
-    const namespaces = Object.keys(this.mdoc?.documents?.[0]?.issuerSigned?.nameSpaces);
+    const namespaces = this.mdoc?.get("documents")?.[0]?.get("issuerSigned")?.get("nameSpaces").keys();
     for (const ns of namespaces) {
       if (ns === this.defaultNamespace) continue;
       this.loadAttributes(ns);
@@ -61,7 +65,7 @@ export class MDOC {
   }
 
   private loadAttributes(namespace) {
-    const nsAttrs = this.mdoc.documents[0].issuerSigned.nameSpaces[namespace];
+    const nsAttrs = this.mdoc?.get("documents")?.[0]?.get("issuerSigned")?.get("nameSpaces")?.get(namespace);
     if (namespace === this.defaultNamespace) {
       // load the default namespace attributes in order defined in MDL_FIELDS
       for (const field of MDL_FIELDS) {
@@ -74,8 +78,8 @@ export class MDOC {
     } else {
       // otherwise, load the namespace as defined in the mdoc
       for (const item of nsAttrs) {
-        const attributeName = item.elementIdentifier;
-        const attributeValue = item.elementValue;
+        const attributeName = item.data?.get("elementIdentifier");
+        const attributeValue = this.parseValue(item.data?.get("elementValue"));
         if (attributeValue) {
           this.attributes[attributeName] = attributeValue;
         }
@@ -83,8 +87,18 @@ export class MDOC {
     }
   }
 
-  private getElementValue(key: string, list: IssuerSignedItem[]): any {
-    const item = list.find((i) => i.elementIdentifier === key);
-    return item?.elementValue;
+  private getElementValue(key: string, list: DataItem[]): any {
+    const item = list.find((i) => i.data?.get("elementIdentifier") === key);
+    const value = item?.data?.get("elementValue");
+    return this.parseValue(value);
+  }
+
+  private parseValue(value: any) {
+    if (Array.isArray(value)) {
+      return value.map((item) => {
+        return item instanceof Map ? Object.fromEntries(item) : item;
+      });
+    }
+    return value instanceof Map ? Object.fromEntries(value) : value;
   }
 }

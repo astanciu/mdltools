@@ -2,9 +2,12 @@ import * as jose from "jose";
 import cose from "cose-js";
 import { MDOC } from "./MDOC";
 import { InputDescriptor, PresentationDefinition } from "./types/PresentationDefinition";
-import { MDOCDocument } from "./types/MDOC";
-import { cborDecode, cborEncode, cborTagged, maybeEncodeValue, Tagged } from "./utils";
-import { DeviceResponseType, DeviceSignature, DeviceSigned, DeviceSigned_Build } from "./types/DeviceResponse";
+
+import { maybeEncodeValue } from "./utils";
+import { DeviceResponseType, DeviceSignature, DeviceSigned_Build } from "./types/DeviceResponse";
+import { DataItem, cborEncode, cborDecode } from "./cbor";
+import CborMap from "cbor-web/types/lib/map";
+import { CBORMap } from "./types/MDOC";
 
 const DOC_TYPE = "org.iso.18013.5.1.mDL";
 
@@ -81,7 +84,7 @@ export class DeviceResponse {
   }
 
   private async handleInputDescriptor(id: InputDescriptor) {
-    const mdocDocument: MDOCDocument = this.mdoc.mdoc.documents.find((d) => d.docType === id.id);
+    const mdocDocument: CborMap = (this.mdoc.mdoc?.get("documents") || []).find((d) => d.get("docType") === id.id);
     if (!mdocDocument) {
       // TODO; probl need to create a DocumentError here, but let's just throw for now
       throw new Error(`The mdoc does not have a document with DocType "${id.id}"`);
@@ -90,12 +93,12 @@ export class DeviceResponse {
     const nameSpaces = await this.prepareNamespaces(id, mdocDocument);
 
     const doc: any = {
-      docType: mdocDocument.docType,
+      docType: mdocDocument.get("docType"),
       issuerSigned: {
         nameSpaces,
-        issuerAuth: mdocDocument.issuerSigned.issuerAuth,
+        issuerAuth: mdocDocument.get("issuerSigned")?.get("issuerAuth"),
       },
-      deviceSigned: await this.getdeviceSigned(mdocDocument.docType),
+      deviceSigned: await this.getdeviceSigned(mdocDocument.get("docType")),
     };
 
     return { doc };
@@ -106,7 +109,7 @@ export class DeviceResponse {
    * add processing for device data
    */
   private async getDeviceNameSpaceBytes() {
-    return cborTagged(24, await cborEncode({}));
+    return DataItem.fromData({});
   }
 
   private async getdeviceSigned(docType: string): Promise<DeviceSigned_Build> {
@@ -123,7 +126,7 @@ export class DeviceResponse {
       await this.getDeviceNameSpaceBytes(),
     ];
 
-    const deviceAuthenticationBytes = cborTagged(24, cborEncode(deviceAuthentication)).value;
+    const deviceAuthenticationBytes = cborEncode(DataItem.fromData(deviceAuthentication));
 
     const deviceSigned: DeviceSigned_Build = {
       nameSpaces: await this.getDeviceNameSpaceBytes(),
@@ -132,7 +135,6 @@ export class DeviceResponse {
         : await this.getDeviceAuthSign(deviceAuthenticationBytes),
     };
 
-    // @ts-ignore
     return deviceSigned;
   }
 
@@ -150,7 +152,7 @@ export class DeviceResponse {
     };
   }
 
-  private async getDeviceAuthSign(cborData: Buffer): Promise<DeviceSignature> {
+  private async getDeviceAuthSign(cborData: Buffer | Uint8Array): Promise<DeviceSignature> {
     if (!this.devicePrivateKey) throw new Error("Missing devicePrivateKey");
 
     const jwk = await jose.exportJWK(this.devicePrivateKey);
@@ -176,7 +178,7 @@ export class DeviceResponse {
     };
   }
 
-  private async prepareNamespaces(id: InputDescriptor, mdocDocument: MDOCDocument) {
+  private async prepareNamespaces(id: InputDescriptor, mdocDocument: CBORMap) {
     const requestedFields = id.constraints.fields;
     const nameSpaces = {};
     for await (const field of requestedFields) {
@@ -202,32 +204,21 @@ export class DeviceResponse {
    */
   private async prepareDigest(
     paths: string[],
-    mdocDocument: MDOCDocument
-    // TODO: add Tagged type back in
-  ): Promise<{ nameSpace: string; digest: Tagged } | null> {
+    mdocDocument: CBORMap
+  ): Promise<{ nameSpace: string; digest: DataItem } | null> {
     for (const path of paths) {
       const [[_1, nameSpace], [_2, elementIdentifier]] = [...path.matchAll(/\['(.*?)'\]/g)];
       if (!nameSpace) throw new Error(`Failed to parse namespace from path "${path}"`);
       if (!elementIdentifier) throw new Error(`Failed to parse elementIdentifier from path "${path}"`);
 
-      const digest = (mdocDocument.issuerSigned?.nameSpaces?.[nameSpace] || []).find(
-        (d) => d.elementIdentifier === elementIdentifier
-      );
+      const nsAttrs = mdocDocument.get("issuerSigned")?.get("nameSpaces")?.get(nameSpace) || [];
+      const digest = nsAttrs.find((d) => d.data?.get("elementIdentifier") === elementIdentifier);
 
-      if (digest) {
-        const digestWithEncodedValue = {
-          ...digest,
-          elementValue: maybeEncodeValue(digest.elementIdentifier, digest.elementValue),
-        };
-
-        const encodedDigest = cborTagged(24, cborEncode(digestWithEncodedValue));
-
+      if (digest)
         return {
           nameSpace,
-          // encode the value if necessary
-          digest: encodedDigest,
+          digest,
         };
-      }
     }
 
     return null;

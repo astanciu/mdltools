@@ -12,25 +12,9 @@ export function maybeEncodeValue(key: string, value: any): any {
   const tag = TAG_MAP[key];
   if (!tag) return value;
 
-  if (tag === 1004) return cborTagged(1004, value);
+  if (tag === 1004) return new Date(value);
 
   throw new Error(`Unknown tag "${tag}"`);
-}
-
-// Do all CBOR operations in one spot so we can change libs easily
-export function cborEncode(data: any) {
-  return encode(data);
-}
-export function cborTagged(tag: number, data: any) {
-  return new Tagged(tag, data);
-}
-
-export function cborDecode(data: any) {
-  const extraTags = {
-    24: (value) => decode(value, { tags: extraTags }),
-    1004: (dateString) => dateString,
-  };
-  return decode(data, { tags: extraTags });
 }
 
 export function convertJWKtoJsonWebKey(jwk: JWK): JsonWebKey {

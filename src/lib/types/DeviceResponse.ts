@@ -1,5 +1,6 @@
 import { Tagged } from "cbor";
 import { IssuerSigned } from "./MDOC";
+import { DataItem } from "../cbor";
 
 export type DeviceSignedItem = Record<string, any>;
 
@@ -16,7 +17,7 @@ export type DeviceAuth = DeviceMac | DeviceSignature;
 // This version of the type is used for building the
 // the javascript object used to generate the device response
 export type DeviceSigned_Build = {
-  nameSpaces: Tagged;
+  nameSpaces: DataItem;
   deviceAuth: DeviceAuth;
 };
 

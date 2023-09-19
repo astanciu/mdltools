@@ -1,8 +1,10 @@
 import { randomBytes, createHash } from "node:crypto";
 import * as jose from "jose";
 import cose from "cose-js";
-import { IssuerSignedItem } from "./types/MDOC";
-import { cborDecode, cborEncode, cborTagged, fromPEM, jwk2COSE_Key, maybeEncodeValue, Tagged } from "./utils";
+
+import { fromPEM, jwk2COSE_Key, maybeEncodeValue } from "./utils";
+import { DataItem, cborEncode, cborDecode } from "./cbor";
+import { StringDate } from "./cbor/StringDate";
 
 const DIGEST_ALGS = {
   "SHA-256": "sha256",
@@ -50,12 +52,14 @@ export class MDOCBuilder {
   async save(): Promise<Buffer> {
     const issuerAuth = await this.buildMSO();
     const nameSpaces = {};
+
     for (const ns of this.namespaces.values()) {
       nameSpaces[ns] = [];
       for (const [_, val] of Object.entries(this.mapOfDigests[ns])) {
         nameSpaces[ns].push(val);
       }
     }
+
     const mdl = {
       version: "1.0",
       documents: [
@@ -81,24 +85,24 @@ export class MDOCBuilder {
     key: string,
     value: any,
     digestID: number
-  ): Promise<{ itemBytes: Tagged; hash: Buffer }> {
+  ): Promise<{ itemBytes: DataItem; hash: Buffer }> {
     const salt = randomBytes(32);
     const encodedValue = maybeEncodeValue(key, value);
 
-    const digest: IssuerSignedItem = {
+    const digest = {
       digestID,
       random: salt,
       elementIdentifier: key,
       elementValue: encodedValue,
     };
 
-    const itemBytes = cborTagged(24, cborEncode(digest));
-
+    const itemBytes = DataItem.fromData(digest);
     const hash = await this.hashDigest(itemBytes);
+
     return { itemBytes, hash };
   }
 
-  async hashDigest(itemBytes: Tagged): Promise<Buffer> {
+  async hashDigest(itemBytes: DataItem): Promise<Buffer> {
     const encoded = cborEncode(itemBytes);
     const sha256Hash = createHash(DIGEST_ALGS[this.digestAlgo]).update(encoded).digest();
 
@@ -124,16 +128,15 @@ export class MDOCBuilder {
     const expTime = new Date();
     expTime.setHours(expTime.getHours() + 5);
 
-    const signedDate = cborTagged(0, this.formatDate(utcNow));
-    const validFromDate = cborTagged(0, this.formatDate(utcNow));
-    const validUntilDate = cborTagged(0, this.formatDate(expTime));
+    const signedDate = new StringDate(utcNow);
+    const validFromDate = new StringDate(utcNow);
+    const validUntilDate = new StringDate(expTime);
 
     const deviceKey = jwk2COSE_Key(devicePublicKeyJwk);
 
     const mso = {
       version: "1.0",
       digestAlgorithm: this.digestAlgo,
-      // valueDigests: cborTagged(24, await cborEncode(this.mapOfHashes)),
       valueDigests: this.mapOfHashes,
       deviceKeyInfo: {
         deviceKey: deviceKey,
@@ -146,8 +149,7 @@ export class MDOCBuilder {
       },
     };
 
-    const msoCbor = cborTagged(24, Buffer.from(cborEncode(mso))).value;
-    const dec = cborDecode(msoCbor);
+    const msoCbor = cborEncode(DataItem.fromData(mso));
 
     const headers: cose.Headers = {
       p: { alg: "ES256" },
@@ -164,6 +166,7 @@ export class MDOCBuilder {
     // signedCbor is a cbor of an object with shape {err, tag, value}. We only want the value
     // so we need to decode it and extract it
     const decoded = cborDecode(signedCbor);
+
     return decoded.value;
   }
 }
