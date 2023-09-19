@@ -18,12 +18,6 @@ export class StringDate {
 addExtension({
   Class: StringDate,
   tag: 0,
-  encode: (instance: StringDate, encode) => {
-    console.log("encoding...");
-    // @ts-ignore
-    return encode(instance.formattedDate);
-  },
-  decode: (stringDate: string): Object => {
-    return new Date(stringDate);
-  },
+  encode: (instance: StringDate, encode) => encode(instance.formattedDate),
+  decode: (stringDate: string): Object => new Date(stringDate),
 });

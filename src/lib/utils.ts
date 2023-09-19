@@ -1,11 +1,7 @@
-import { Tagged, decode, encode } from "cbor-web";
-export { Tagged } from "cbor-web";
 import * as jose from "jose";
 import cosekey from "parse-cosekey";
 
 import { TAG_MAP } from "./config";
-import { JWK } from "jose";
-import { JsonWebKey, JwkEcCurve, JwkKty } from "@mattrglobal/cose";
 
 export function maybeEncodeValue(key: string, value: any): any {
   // only dates of type 'full-date' need to be tagged as 1004
@@ -15,21 +11,6 @@ export function maybeEncodeValue(key: string, value: any): any {
   if (tag === 1004) return new Date(value);
 
   throw new Error(`Unknown tag "${tag}"`);
-}
-
-export function convertJWKtoJsonWebKey(jwk: JWK): JsonWebKey {
-  const kty = JwkKty[jwk.kty];
-  const crv = JwkEcCurve[jwk.crv.replace("-", "")];
-
-  const key: JsonWebKey = {
-    kty,
-    crv,
-    x: jwk.x,
-    y: jwk.y,
-    d: jwk.d,
-    kid: "11",
-  };
-  return key;
 }
 
 export function fromPEM(pem) {

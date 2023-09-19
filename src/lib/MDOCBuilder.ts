@@ -158,7 +158,7 @@ export class MDOCBuilder {
     };
     const signer: cose.sign.Signer = {
       key: {
-        d: Buffer.from(devicePrivateKeyJwk.d, "base64url"),
+        d: Buffer.from(devicePrivateKeyJwk.d!, "base64url"),
       },
     };
     const signedCbor = await cose.sign.create(headers, msoCbor, signer);

@@ -2,18 +2,15 @@ import * as jose from "jose";
 import cose from "cose-js";
 import { MDOC } from "./MDOC";
 import { InputDescriptor, PresentationDefinition } from "./types/PresentationDefinition";
-
-import { maybeEncodeValue } from "./utils";
 import { DeviceResponseType, DeviceSignature, DeviceSigned_Build } from "./types/DeviceResponse";
 import { DataItem, cborEncode, cborDecode } from "./cbor";
-import CborMap from "cbor-web/types/lib/map";
 import { CBORMap } from "./types/MDOC";
 
 const DOC_TYPE = "org.iso.18013.5.1.mDL";
 
 export class DeviceResponse {
-  private mdoc: MDOC = null;
-  private pd: PresentationDefinition = null;
+  private mdoc: MDOC;
+  private pd: PresentationDefinition;
   private handover: string[];
   private useMac = true;
   private devicePrivateKey: jose.KeyLike;
@@ -84,7 +81,7 @@ export class DeviceResponse {
   }
 
   private async handleInputDescriptor(id: InputDescriptor) {
-    const mdocDocument: CborMap = (this.mdoc.mdoc?.get("documents") || []).find((d) => d.get("docType") === id.id);
+    const mdocDocument: CBORMap = (this.mdoc.mdoc?.get("documents") || []).find((d) => d.get("docType") === id.id);
     if (!mdocDocument) {
       // TODO; probl need to create a DocumentError here, but let's just throw for now
       throw new Error(`The mdoc does not have a document with DocType "${id.id}"`);
@@ -164,7 +161,7 @@ export class DeviceResponse {
 
     const signer: cose.sign.Signer = {
       key: {
-        d: Buffer.from(jwk.d, "base64url"),
+        d: Buffer.from(jwk.d!, "base64url"),
       },
     };
 
