@@ -1,9 +1,9 @@
 import * as jose from "jose";
-import cose from "cose-js";
 import { MDOC } from "./MDOC";
 import { InputDescriptor, PresentationDefinition } from "./types/PresentationDefinition";
 import { DeviceResponseType, DeviceSignature, DeviceSigned_Build } from "./types/DeviceResponse";
 import { DataItem, cborEncode, cborDecode } from "./cbor";
+import { createCoseSignature } from "./cose";
 import { CBORMap } from "./types/MDOC";
 
 const DOC_TYPE = "org.iso.18013.5.1.mDL";
@@ -152,20 +152,16 @@ export class DeviceResponse {
   private async getDeviceAuthSign(cborData: Buffer | Uint8Array): Promise<DeviceSignature> {
     if (!this.devicePrivateKey) throw new Error("Missing devicePrivateKey");
 
-    const jwk = await jose.exportJWK(this.devicePrivateKey);
+    const protectedHeader = { alg: "ES256" };
+    const unprotectedHeader = { kid: "11" }; // TODO: what should this be?
 
-    const headers: cose.Headers = {
-      p: { alg: "ES256" },
-      u: { kid: "11" }, // ?? what should this be?
-    };
+    const signedCbor = await createCoseSignature(
+      protectedHeader,
+      unprotectedHeader,
+      Buffer.from(cborData),
+      this.devicePrivateKey
+    );
 
-    const signer: cose.sign.Signer = {
-      key: {
-        d: Buffer.from(jwk.d!, "base64url"),
-      },
-    };
-
-    const signedCbor = await cose.sign.create(headers, Buffer.from(cborData), signer);
     // signedCbor is a cbor of an object with shape {err, tag, value}. We only want the value
     // so we need to decode it and extract it
     const decoded = await cborDecode(signedCbor);

@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "cbor-x": "^1.5.4",
-    "cose-js": "https://github.com/oneproof-inc/cose-js",
+    "cose": "portal:../cose",
     "jose": "^4.14.6",
     "parse-cosekey": "^1.0.2"
   },

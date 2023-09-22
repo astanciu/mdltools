@@ -1,10 +1,10 @@
 import { randomBytes, createHash } from "node:crypto";
 import * as jose from "jose";
-import cose from "cose-js";
 
 import { fromPEM, jwk2COSE_Key, maybeEncodeValue } from "./utils";
 import { DataItem, cborEncode, cborDecode } from "./cbor";
 import { StringDate } from "./cbor/StringDate";
+import { createCoseSignature } from "./cose";
 
 const DIGEST_ALGS = {
   "SHA-256": "sha256",
@@ -119,9 +119,8 @@ export class MDOCBuilder {
   }
 
   async buildMSO() {
-    const devicePrivateKeyJwk = await jose.exportJWK(await jose.importPKCS8(this.issuerPrivateKeyPem, ""));
+    const devicePrivateKey = await jose.importPKCS8(this.issuerPrivateKeyPem, "");
     const devicePublicKeyJwk = await jose.exportJWK(this.devicePublicKey);
-
     const issuerPublicKeyBuffer = fromPEM(this.issuerCertificatePem);
 
     const utcNow = new Date();
@@ -151,17 +150,10 @@ export class MDOCBuilder {
 
     const msoCbor = cborEncode(DataItem.fromData(mso));
 
-    const headers: cose.Headers = {
-      p: { alg: "ES256" },
-      // @ts-ignore
-      u: { kid: "11", x5chain: [issuerPublicKeyBuffer] },
-    };
-    const signer: cose.sign.Signer = {
-      key: {
-        d: Buffer.from(devicePrivateKeyJwk.d!, "base64url"),
-      },
-    };
-    const signedCbor = await cose.sign.create(headers, msoCbor, signer);
+    const protectedHeader = { alg: "ES256" };
+    const unprotectedHeader = { kid: "11", x5chain: [issuerPublicKeyBuffer] };
+
+    const signedCbor = await createCoseSignature(protectedHeader, unprotectedHeader, msoCbor, devicePrivateKey);
 
     // signedCbor is a cbor of an object with shape {err, tag, value}. We only want the value
     // so we need to decode it and extract it
