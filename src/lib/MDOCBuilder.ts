@@ -154,12 +154,7 @@ export class MDOCBuilder {
     const protectedHeader = { alg: "ES256" };
     const unprotectedHeader = { kid: "11", x5chain: [issuerPublicKeyBuffer] };
 
-    const signedCbor = await createCoseSignature(protectedHeader, unprotectedHeader, msoCbor, devicePrivateKey);
+    return createCoseSignature(protectedHeader, unprotectedHeader, msoCbor, devicePrivateKey);
 
-    // signedCbor is a cbor of an object with shape {err, tag, value}. We only want the value
-    // so we need to decode it and extract it
-    const decoded = cborDecode(signedCbor);
-
-    return decoded.value;
   }
 }
