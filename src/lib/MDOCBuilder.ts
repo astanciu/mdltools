@@ -1,9 +1,7 @@
 import crypto from "crypto";
-
 import * as jose from "jose";
-
 import { fromPEM, jwk2COSE_Key, maybeEncodeValue } from "./utils";
-import { DataItem, cborEncode, cborDecode } from "./cbor";
+import { DataItem, cborEncode } from "./cbor";
 import { StringDate } from "./cbor/StringDate";
 import { createCoseSignature } from "./cose";
 
@@ -155,6 +153,5 @@ export class MDOCBuilder {
     const unprotectedHeader = { kid: "11", x5chain: [issuerPublicKeyBuffer] };
 
     return createCoseSignature(protectedHeader, unprotectedHeader, msoCbor, devicePrivateKey);
-
   }
 }

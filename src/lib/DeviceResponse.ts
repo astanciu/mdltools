@@ -2,7 +2,7 @@ import * as jose from "jose";
 import { MDOC } from "./MDOC";
 import { InputDescriptor, PresentationDefinition } from "./types/PresentationDefinition";
 import { DeviceResponseType, DeviceSignature, DeviceSigned_Build } from "./types/DeviceResponse";
-import { DataItem, cborEncode, cborDecode } from "./cbor";
+import { DataItem, cborEncode } from "./cbor";
 import { createCoseSignature } from "./cose";
 import { CBORMap } from "./types/MDOC";
 

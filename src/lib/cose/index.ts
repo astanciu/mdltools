@@ -1,6 +1,5 @@
-import { KeyLike, importJWK } from "jose";
-import { Sign1, coseSign } from "cose";
-import { cborEncode } from "../cbor";
+import { KeyLike } from "jose";
+import { Sign1 } from "cose";
 
 /**
  * Create an untagged COSE_Sign1.
@@ -12,9 +11,7 @@ import { cborEncode } from "../cbor";
  * @returns
  */
 export const createCoseSignature = async (protectedHeaders, unprotectedHeaders, payload, key: KeyLike | Uint8Array) => {
-  const sign1 = await Sign1.sign(
-    protectedHeaders, unprotectedHeaders, payload, key
-  );
-
+  const sign1 = await Sign1.sign(protectedHeaders, unprotectedHeaders, payload, key);
+  const tes = sign1.getContentForEncoding();
   return sign1.getContentForEncoding();
 };
