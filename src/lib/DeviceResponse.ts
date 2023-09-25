@@ -162,12 +162,8 @@ export class DeviceResponse {
       this.devicePrivateKey
     );
 
-    // signedCbor is a cbor of an object with shape {err, tag, value}. We only want the value
-    // so we need to decode it and extract it
-    const decoded = await cborDecode(signedCbor);
-
     return {
-      deviceSignature: decoded.value,
+      deviceSignature: signedCbor,
     };
   }
 
