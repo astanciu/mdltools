@@ -1,4 +1,5 @@
-import { randomBytes, createHash } from "node:crypto";
+import crypto from "crypto";
+
 import * as jose from "jose";
 
 import { fromPEM, jwk2COSE_Key, maybeEncodeValue } from "./utils";
@@ -86,7 +87,7 @@ export class MDOCBuilder {
     value: any,
     digestID: number
   ): Promise<{ itemBytes: DataItem; hash: Buffer }> {
-    const salt = randomBytes(32);
+    const salt = crypto.randomBytes(32);
     const encodedValue = maybeEncodeValue(key, value);
 
     const digest = {
@@ -104,7 +105,7 @@ export class MDOCBuilder {
 
   async hashDigest(itemBytes: DataItem): Promise<Buffer> {
     const encoded = cborEncode(itemBytes);
-    const sha256Hash = createHash(DIGEST_ALGS[this.digestAlgo]).update(encoded).digest();
+    const sha256Hash = crypto.createHash(DIGEST_ALGS[this.digestAlgo]).update(encoded).digest();
 
     return sha256Hash;
   }

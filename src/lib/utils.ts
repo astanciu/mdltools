@@ -23,3 +23,12 @@ export function jwk2COSE_Key(jwk: jose.JWK) {
 
   return coseMap;
 }
+
+
+// export const getRandomBytes = (size: number) => {
+//   const bytes = crypto.randomBytes(32);
+//   return bytes
+// }
+// export const hash = () => {
+  
+// }

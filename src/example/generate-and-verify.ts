@@ -46,7 +46,7 @@ async function main() {
     mdocGeneratedNonce
   );
 
-  const verifier = new DeviceResponseVerifier(trustedCerts);
+  const verifier = new DeviceResponseVerifier.default(trustedCerts);
   const { isValid } = await verifier.verify(deviceResponse, {
     ephemeralReaderKey,
     encodedSessionTranscript,

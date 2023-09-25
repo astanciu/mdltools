@@ -6,11 +6,11 @@
     "full": "yarn ts-node src/example/generate-and-verify.ts",
     "generate": "yarn ts-node src/example/generate-mdl.ts",
     "mdoc": "yarn ts-node src/example/mdoc.ts",
-    "build": "rimraf ./build && node build.mjs"
+    "build": "rimraf ./build && node scripts/build.mjs"
   },
   "dependencies": {
     "cbor-x": "^1.5.4",
-    "cose": "portal:../cose",
+    "cose": "git@github.com:jfromaniello/cose.git",
     "jose": "^4.14.6",
     "parse-cosekey": "^1.0.2"
   },
