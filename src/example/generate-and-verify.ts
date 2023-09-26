@@ -46,18 +46,22 @@ async function main() {
     mdocGeneratedNonce
   );
 
-  const verifier = new DeviceResponseVerifier.default(trustedCerts);
-  const { isValid } = await verifier.verify(deviceResponse, {
-    ephemeralReaderKey,
-    encodedSessionTranscript,
-  });
-  const summary = verifier.getVerificationSummary();
-  for (const item of summary) {
-    // if (item.level !== "info")
-    console.log(`${item.level}: ${item.msg}`);
+  const verifier = new DeviceResponseVerifier(trustedCerts);
+  try {
+    await verifier.verify(deviceResponse, {
+      ephemeralReaderKey,
+      encodedSessionTranscript,
+      onCheck: (v) => {
+        console.log(`${v.reason ?? v.check}: ${v.status}`);
+        if (v.status === 'FAILED') {
+          throw new Error(v.reason || v.check);
+        }
+      }
+    });
+    console.log("Credential verified successfully");
+  } catch (err) {
+    console.log("Credential verification failed");
   }
-
-  console.log("Valid: ", isValid);
 }
 
 async function generateMDL(issuerCertPem, issuerPubKeyPem, devicePublicKey) {
