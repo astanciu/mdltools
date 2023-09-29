@@ -13,7 +13,7 @@
     "cose": "git@github.com:jfromaniello/cose.git",
     "jose": "^4.14.6",
     "mdl": "file:../mdl",
-    "parse-cosekey": "^1.0.2"
+    "str2ab": "^1.2.1"
   },
   "devDependencies": {
     "@types/cose-js": "^0.8.1",

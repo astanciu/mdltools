@@ -1,7 +1,7 @@
 import * as jose from "jose";
-import cosekey from "parse-cosekey";
 
 import { TAG_MAP } from "./config";
+import { jwk2cose } from "./cose/keyconverter/keyconvert";
 
 export function maybeEncodeValue(key: string, value: any): any {
   // only dates of type 'full-date' need to be tagged as 1004
@@ -19,16 +19,9 @@ export function fromPEM(pem) {
 }
 
 export function jwk2COSE_Key(jwk: jose.JWK) {
-  const coseMap = cosekey.KeyParser.jwk2cose(jwk);
+  const coseMap = jwk2cose(jwk);
 
   return coseMap;
 }
 
 
-// export const getRandomBytes = (size: number) => {
-//   const bytes = crypto.randomBytes(32);
-//   return bytes
-// }
-// export const hash = () => {
-  
-// }
