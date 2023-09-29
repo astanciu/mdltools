@@ -106,7 +106,7 @@ export class DeviceResponse {
    * add processing for device data
    */
   private async getDeviceNameSpaceBytes() {
-    return DataItem.fromData({});
+    return DataItem.fromData(new Map());
   }
 
   private async getdeviceSigned(docType: string): Promise<DeviceSigned_Build> {

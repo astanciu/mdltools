@@ -3,15 +3,16 @@
   "packageManager": "yarn@3.6.3",
   "main": "build/mdltools.js",
   "scripts": {
-    "full": "yarn ts-node src/example/generate-and-verify.ts",
-    "generate": "yarn ts-node src/example/generate-mdl.ts",
-    "mdoc": "yarn ts-node src/example/mdoc.ts",
+    "full": "ts-node src/example/generate-and-verify.ts",
+    "generate": "ts-node src/example/generate-mdl.ts",
+    "mdoc": "ts-node src/example/mdoc.ts",
     "build": "rimraf ./build && node scripts/build.mjs"
   },
   "dependencies": {
     "cbor-x": "^1.5.4",
     "cose": "git@github.com:jfromaniello/cose.git",
     "jose": "^4.14.6",
+    "mdl": "file:../mdl",
     "parse-cosekey": "^1.0.2"
   },
   "devDependencies": {
@@ -19,7 +20,6 @@
     "@types/node": "^20.5.9",
     "esbuild": "^0.19.3",
     "esbuild-plugin-polyfill-node": "^0.3.0",
-    "mdl": "portal:../mdl",
     "rimraf": "^5.0.1",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"
