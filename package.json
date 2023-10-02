@@ -11,12 +11,14 @@
   "dependencies": {
     "cbor-x": "^1.5.4",
     "cose": "git@github.com:jfromaniello/cose.git",
+    "crypto-js": "^4.1.1",
     "jose": "^4.14.6",
     "mdl": "file:../mdl",
     "str2ab": "^1.2.1"
   },
   "devDependencies": {
     "@types/cose-js": "^0.8.1",
+    "@types/crypto-js": "^4.1.2",
     "@types/node": "^20.5.9",
     "esbuild": "^0.19.3",
     "esbuild-plugin-polyfill-node": "^0.3.0",

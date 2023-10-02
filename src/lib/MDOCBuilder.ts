@@ -1,15 +1,9 @@
-import crypto from "crypto";
 import * as jose from "jose";
 import { fromPEM, jwk2COSE_Key, maybeEncodeValue } from "./utils";
 import { DataItem, cborEncode } from "./cbor";
 import { StringDate } from "./cbor/StringDate";
 import { createCoseSignature } from "./cose";
-
-const DIGEST_ALGS = {
-  "SHA-256": "sha256",
-  "SHA-384": "sha384",
-  "SHA-512": "sha512",
-} as { [key: string]: string };
+import { getRandomBytes, hash } from "./crypto/node";
 
 export class MDOCBuilder {
   public readonly defaultDocType = "org.iso.18013.5.1.mDL";
@@ -36,7 +30,7 @@ export class MDOCBuilder {
     }
     this.namespaces.add(namespace);
     this.mapOfDigests[namespace] = {};
-    this.mapOfHashes[namespace] = new Map<number, Buffer>();
+    this.mapOfHashes[namespace] = new Map<number, Buffer | Uint8Array>();
     let digestCounter = 0;
 
     for (const [key, value] of Object.entries(values)) {
@@ -84,8 +78,8 @@ export class MDOCBuilder {
     key: string,
     value: any,
     digestID: number
-  ): Promise<{ itemBytes: DataItem; hash: Buffer }> {
-    const salt = crypto.randomBytes(32);
+  ): Promise<{ itemBytes: DataItem; hash: Buffer | Uint8Array }> {
+    const salt = getRandomBytes(32);
     const encodedValue = maybeEncodeValue(key, value);
 
     const digest = {
@@ -101,9 +95,9 @@ export class MDOCBuilder {
     return { itemBytes, hash };
   }
 
-  async hashDigest(itemBytes: DataItem): Promise<Buffer> {
+  async hashDigest(itemBytes: DataItem): Promise<Buffer | Uint8Array> {
     const encoded = cborEncode(itemBytes);
-    const sha256Hash = crypto.createHash(DIGEST_ALGS[this.digestAlgo]).update(encoded).digest();
+    const sha256Hash = hash(encoded, this.digestAlgo);
 
     return sha256Hash;
   }
