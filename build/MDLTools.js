@@ -3029,6 +3029,14 @@ var MDOC = class _MDOC {
           this.attributes[attributeName] = attributeValue;
         }
       }
+      for (let i = 1; i <= 150; i++) {
+        const age = i < 10 ? `0${i}` : i;
+        const attributeName = `age_over_${age}`;
+        const attributeValue = this.getElementValue(attributeName, nsAttrs);
+        if (attributeValue) {
+          this.attributes[attributeName] = attributeValue;
+        }
+      }
     } else {
       for (const item of nsAttrs) {
         const attributeName = item.data?.get("elementIdentifier");
@@ -29160,6 +29168,26 @@ var MDOCBuilder = class {
       this.mapOfDigests[namespace][digestCounter] = itemBytes;
       this.mapOfHashes[namespace].set(digestCounter, hash2);
       digestCounter++;
+      if (key === "birth_date") {
+        const ageInYears = this.getAgeInYears(value);
+        {
+          const over21 = ageInYears >= 21;
+          const { itemBytes: itemBytes2, hash: hash3 } = await this.processAttribute("age_over_21", over21, digestCounter);
+          this.mapOfDigests[namespace][digestCounter] = itemBytes2;
+          this.mapOfHashes[namespace].set(digestCounter, hash3);
+          digestCounter++;
+        }
+        {
+          const { itemBytes: itemBytes2, hash: hash3 } = await this.processAttribute(
+            `age_over_${Math.floor(ageInYears)}`,
+            true,
+            digestCounter
+          );
+          this.mapOfDigests[namespace][digestCounter] = itemBytes2;
+          this.mapOfHashes[namespace].set(digestCounter, hash3);
+          digestCounter++;
+        }
+      }
     }
   }
   async save() {
@@ -29240,6 +29268,17 @@ var MDOCBuilder = class {
     const protectedHeader = { alg: "ES256" };
     const unprotectedHeader = { kid: "11", x5chain: [issuerPublicKeyBuffer] };
     return createCoseSignature(protectedHeader, unprotectedHeader, msoCbor, issuerPrivateKey);
+  }
+  /**
+   * This is not a proper way to calculate year diff, only used as quick demo.
+   * Does not take into account time zones, leap years, and other weird date things
+   */
+  getAgeInYears(birth) {
+    const birthDate = new Date(birth);
+    const today = /* @__PURE__ */ new Date();
+    const ONE_YEAR_MILLI = 1e3 * 60 * 60 * 24 * 365;
+    const age = (today.getTime() - birthDate.getTime()) / ONE_YEAR_MILLI;
+    return age;
   }
 };
 
@@ -29404,6 +29443,9 @@ var DeviceResponse = class _DeviceResponse {
         throw new Error(`Failed to parse elementIdentifier from path "${path}"`);
       const nsAttrs = mdocDocument.get("issuerSigned")?.get("nameSpaces")?.get(nameSpace) || [];
       const digest = nsAttrs.find((d) => d.data?.get("elementIdentifier") === elementIdentifier);
+      if (elementIdentifier.startsWith("age_over_")) {
+        return this.handleAgeOverNN(elementIdentifier, nameSpace, nsAttrs);
+      }
       if (digest)
         return {
           nameSpace,
@@ -29411,6 +29453,30 @@ var DeviceResponse = class _DeviceResponse {
         };
     }
     return null;
+  }
+  handleAgeOverNN(request, nameSpace, attributes) {
+    const ageOverList = attributes.map((a, i) => {
+      const data = a.data;
+      const key = data.get("elementIdentifier");
+      const value = data.get("elementValue");
+      return { key, value, index: i };
+    }).filter((i) => i.key.startsWith("age_over_")).map((i) => ({
+      nn: parseInt(i.key.replace("age_over_", "")),
+      ...i
+    })).sort((a, b) => a.nn - b.nn);
+    const reqNN = parseInt(request.replace("age_over_", ""));
+    let item;
+    item = ageOverList.filter((i) => i.value === true && i.nn >= reqNN)?.[0];
+    if (!item) {
+      item = ageOverList.sort((a, b) => b.nn - a.nn).filter((i) => i.value === false && i.nn <= reqNN)?.[0];
+    }
+    if (!item) {
+      return null;
+    }
+    return {
+      nameSpace,
+      digest: attributes[item.index]
+    };
   }
 };
 export {
