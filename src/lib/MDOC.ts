@@ -75,6 +75,16 @@ export class MDOC {
           this.attributes[attributeName] = attributeValue;
         }
       }
+
+      // load any "age_over_NN" attributes
+      for (let i = 1; i <= 150; i++) {
+        const age = i < 10 ? `0${i}` : i;
+        const attributeName = `age_over_${age}`;
+        const attributeValue = this.getElementValue(attributeName, nsAttrs);
+        if (attributeValue) {
+          this.attributes[attributeName] = attributeValue;
+        }
+      }
     } else {
       // otherwise, load the namespace as defined in the mdoc
       for (const item of nsAttrs) {

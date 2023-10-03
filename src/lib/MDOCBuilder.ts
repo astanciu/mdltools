@@ -39,6 +39,30 @@ export class MDOCBuilder {
       this.mapOfDigests[namespace][digestCounter] = itemBytes;
       this.mapOfHashes[namespace].set(digestCounter, hash);
       digestCounter++;
+
+      if (key === "birth_date") {
+        const ageInYears = this.getAgeInYears(value);
+        // Add a 'age_over_21' = true/false field
+        {
+          const over21 = ageInYears >= 21;
+          const { itemBytes, hash } = await this.processAttribute("age_over_21", over21, digestCounter);
+          this.mapOfDigests[namespace][digestCounter] = itemBytes;
+          this.mapOfHashes[namespace].set(digestCounter, hash);
+          digestCounter++;
+        }
+
+        // Add a 'age_over_{ACTUAL_YEARS}'=true field
+        {
+          const { itemBytes, hash } = await this.processAttribute(
+            `age_over_${Math.floor(ageInYears)}`,
+            true,
+            digestCounter
+          );
+          this.mapOfDigests[namespace][digestCounter] = itemBytes;
+          this.mapOfHashes[namespace].set(digestCounter, hash);
+          digestCounter++;
+        }
+      }
     }
   }
 
@@ -147,5 +171,18 @@ export class MDOCBuilder {
     const unprotectedHeader = { kid: "11", x5chain: [issuerPublicKeyBuffer] };
 
     return createCoseSignature(protectedHeader, unprotectedHeader, msoCbor, issuerPrivateKey);
+  }
+
+  /**
+   * This is not a proper way to calculate year diff, only used as quick demo.
+   * Does not take into account time zones, leap years, and other weird date things
+   */
+  private getAgeInYears(birth: string): number {
+    const birthDate = new Date(birth);
+    const today = new Date();
+    const ONE_YEAR_MILLI = 1000 * 60 * 60 * 24 * 365;
+    const age = (today.getTime() - birthDate.getTime()) / ONE_YEAR_MILLI;
+
+    return age;
   }
 }
