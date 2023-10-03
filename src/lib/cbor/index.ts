@@ -21,16 +21,16 @@ addExtension({
 });
 
 export const cborDecode = (input: Buffer | Uint8Array, options: Options = encoderDefaults): any => {
-  const params = { ...encoderDefaults, ...options };
+  const params = { ...encoderDefaults, ...options, variableMapSize: true };
   const enc = new Encoder(params);
   return enc.decode(input);
 };
 
 export const cborEncode = (obj: unknown, options: Options = encoderDefaults): Buffer => {
-  const params = { ...encoderDefaults, ...options };
+  const params = { ...encoderDefaults, ...options, variableMapSize: true };
   const enc = new Encoder(params);
   return enc.encode(obj);
 };
-
+11
 export { DataItem } from "./DataItem";
 export { StringDate } from "./StringDate";

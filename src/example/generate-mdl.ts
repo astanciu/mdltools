@@ -18,6 +18,16 @@ async function go() {
   await builder.addNameSpace("org.iso.18013.5.1", {
     family_name: "Jones",
     given_name: "Ava",
+    portrait: "bstr",
+    sex: 'F',
+    height: '5\' 8"',
+    weight: '120lb',
+    eye_colour: 'brown',
+    resident_addres: '123 Street Rd',
+    resident_city: 'Brooklyn',
+    resident_state: 'NY',
+    resident_postal_code: '19001',
+    resident_country: 'US',
     birth_date: "2007-03-25",
     issue_date: "2023-09-01",
     expiry_date: "2028-09-31",
@@ -25,7 +35,6 @@ async function go() {
     issuing_authority: "NY DMV",
     issuing_jurisdiction: "New York",
     document_number: "01-856-5050",
-    portrait: "bstr",
     driving_privileges: [
       {
         vehicle_category_code: "C",

@@ -15,7 +15,7 @@
     "cbor-x": "^1.5.4",
     "cose": "git@github.com:jfromaniello/cose.git",
     "jose": "^4.14.6",
-    "mdl": "file:../mdl",
+    "mdl": "https://drive.google.com/uc?id=114jlnkX80smDM_AiLBxnJl1egI8js8Ne&export=download",
     "str2ab": "^1.2.1"
   },
   "devDependencies": {
