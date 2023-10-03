@@ -32,5 +32,5 @@ export const cborEncode = (obj: unknown, options: Options = encoderDefaults): Bu
   return enc.encode(obj);
 };
 11
-export { DataItem } from "./DataItem";
+export { DataItem } from "mdl";
 export { StringDate } from "./StringDate";

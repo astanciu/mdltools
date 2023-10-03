@@ -60,6 +60,7 @@ async function main() {
     });
     console.log("Credential verified successfully");
   } catch (err) {
+    console.log(err);
     console.log("Credential verification failed");
   }
 }
