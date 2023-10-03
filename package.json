@@ -6,6 +6,7 @@
   },
   "scripts": {
     "full": "ts-node --project tsconfig.json src/example/generate-and-verify.ts",
+    "full2": "ts-node --project tsconfig.json src/example/generate-and-verify-age.ts",
     "generate": "ts-node src/example/generate-mdl.ts",
     "mdoc": "ts-node src/example/mdoc.ts",
     "build": "rimraf ./build && node scripts/build.mjs"

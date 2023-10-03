@@ -92,3 +92,26 @@ export const PRESENTATION_DEFINITION_1 = {
     },
   ],
 };
+
+export const PRESENTATION_DEFINITION_2 = {
+  id: "mdl-test-age-over-18",
+  input_descriptors: [
+    {
+      id: "org.iso.18013.5.1.mDL",
+      format: {
+        mso_mdoc: {
+          alg: ["EdDSA", "ES256"],
+        },
+      },
+      constraints: {
+        limit_disclosure: "required",
+        fields: [
+          {
+            path: ["$['org.iso.18013.5.1']['age_over_18']"],
+            intent_to_retain: false,
+          },
+        ],
+      },
+    },
+  ],
+};

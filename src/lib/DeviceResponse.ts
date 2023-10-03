@@ -200,8 +200,12 @@ export class DeviceResponse {
       if (!nameSpace) throw new Error(`Failed to parse namespace from path "${path}"`);
       if (!elementIdentifier) throw new Error(`Failed to parse elementIdentifier from path "${path}"`);
 
-      const nsAttrs = mdocDocument.get("issuerSigned")?.get("nameSpaces")?.get(nameSpace) || [];
+      const nsAttrs: DataItem[] = mdocDocument.get("issuerSigned")?.get("nameSpaces")?.get(nameSpace) || [];
       const digest = nsAttrs.find((d) => d.data?.get("elementIdentifier") === elementIdentifier);
+
+      if (elementIdentifier.startsWith("age_over_")) {
+        return this.handleAgeOverNN(elementIdentifier, nameSpace, nsAttrs);
+      }
 
       if (digest)
         return {
@@ -211,5 +215,46 @@ export class DeviceResponse {
     }
 
     return null;
+  }
+
+  private handleAgeOverNN(
+    request: string,
+    nameSpace: string,
+    attributes: DataItem[]
+  ): { nameSpace: string; digest: DataItem } | null {
+    const ageOverList = attributes
+      .map((a, i) => {
+        const data = a.data;
+        const key: string = data.get("elementIdentifier");
+        const value: any = data.get("elementValue");
+
+        return { key, value, index: i };
+      })
+      .filter((i) => i.key.startsWith("age_over_"))
+      .map((i) => ({
+        nn: parseInt(i.key.replace("age_over_", "")),
+        ...i,
+      }))
+      .sort((a, b) => a.nn - b.nn);
+
+    const reqNN = parseInt(request.replace("age_over_", ""));
+
+    let item;
+    // Find nearest TRUE
+    item = ageOverList.filter((i) => i.value === true && i.nn >= reqNN)?.[0];
+
+    if (!item) {
+      // Find the nearest False
+      item = ageOverList.sort((a, b) => b.nn - a.nn).filter((i) => i.value === false && i.nn <= reqNN)?.[0];
+    }
+
+    if (!item) {
+      return null;
+    }
+
+    return {
+      nameSpace,
+      digest: attributes[item.index],
+    };
   }
 }

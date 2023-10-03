@@ -16,21 +16,21 @@ async function go() {
   const builder = new MDOCBuilder(issuerCertificate, issuerPrivatePem, devicePublicKey as jose.KeyLike);
 
   await builder.addNameSpace("org.iso.18013.5.1", {
-    family_name: "Jones",
-    given_name: "Ava",
-    birth_date: "2007-03-25",
-    issue_date: "2023-09-01",
-    expiry_date: "2028-09-31",
+    family_name: "Smith",
+    given_name: "John",
+    birth_date: "1980-06-15",
+    issue_date: "2023-03-01",
+    expiry_date: "2028-03-31",
     issuing_country: "US",
     issuing_authority: "NY DMV",
     issuing_jurisdiction: "New York",
-    document_number: "01-856-5050",
+    document_number: "01-333-7070",
     portrait: "bstr",
     driving_privileges: [
       {
         vehicle_category_code: "C",
-        issue_date: "2023-09-01",
-        expiry_date: "2028-09-31",
+        issue_date: "2023-03-01",
+        expiry_date: "2028-03-31",
       },
     ],
     un_distinguishing_sign: "tbd-us.ny.dmv",
