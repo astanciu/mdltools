@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "#crypto": [
+        "./src/lib/crypto/web/web.ts"
+      ]
+    }
+  },
+}

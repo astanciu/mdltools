@@ -5,9 +5,10 @@ await build({
   entryPoints: ["src/MDLTools.ts"],
   bundle: true,
   outfile: "build/mdltools.js",
-  target: "es2020",
+  // target: "esnext",
   platform: "browser",
-  sourcemap: "inline",
-  plugins: [],
+  format: "esm",
+  // sourcemap: "inline",
+  tsconfig: "./tsconfig-web.json",
   // logLevel: 'verbose',
 });

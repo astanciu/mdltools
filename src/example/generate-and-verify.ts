@@ -53,10 +53,10 @@ async function main() {
       encodedSessionTranscript,
       onCheck: (v) => {
         console.log(`${v.reason ?? v.check}: ${v.status}`);
-        if (v.status === 'FAILED') {
+        if (v.status === "FAILED") {
           throw new Error(v.reason || v.check);
         }
-      }
+      },
     });
     console.log("Credential verified successfully");
   } catch (err) {

@@ -1,7 +1,7 @@
 import * as jose from "jose";
 
 import { MDOC, MDOCBuilder } from "../MDLTools";
-import { ISSUER_CERTIFICATE, ISSUER_CERTIFICATE_PRIVATE_KEY } from "./config";
+import { DEVICE_JWK, ISSUER_CERTIFICATE, ISSUER_CERTIFICATE_PRIVATE_KEY } from "./config";
 
 go().catch((err) => {
   console.log("Oops...");
@@ -11,9 +11,9 @@ go().catch((err) => {
 async function go() {
   const issuerCertificate = ISSUER_CERTIFICATE;
   const issuerPrivatePem = ISSUER_CERTIFICATE_PRIVATE_KEY;
-  const { privateKey } = await jose.generateKeyPair("ES256");
+  const devicePublicKey = await jose.importJWK({ ...DEVICE_JWK, d: undefined });
 
-  const builder = new MDOCBuilder(issuerCertificate, issuerPrivatePem, privateKey);
+  const builder = new MDOCBuilder(issuerCertificate, issuerPrivatePem, devicePublicKey as jose.KeyLike);
 
   await builder.addNameSpace("org.iso.18013.5.1", {
     family_name: "Smith",
@@ -22,7 +22,8 @@ async function go() {
     issue_date: "2023-03-01",
     expiry_date: "2028-03-31",
     issuing_country: "US",
-    authority: "New York DMV",
+    issuing_authority: "NY DMV",
+    issuing_jurisdiction: "New York",
     document_number: "01-333-7070",
     portrait: "bstr",
     driving_privileges: [
@@ -51,4 +52,5 @@ async function go() {
   console.log(mdoc.family_name, mdoc.given_name);
   console.log(mdoc.registered);
   console.log(mdoc.attributes);
+  console.log(mdl.toString("hex"));
 }

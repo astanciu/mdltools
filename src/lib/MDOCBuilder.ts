@@ -3,7 +3,7 @@ import { fromPEM, jwk2COSE_Key, maybeEncodeValue } from "./utils";
 import { DataItem, cborEncode } from "./cbor";
 import { StringDate } from "./cbor/StringDate";
 import { createCoseSignature } from "./cose";
-import { getRandomBytes, hash } from "./crypto/node";
+import { getRandomBytes, hash } from "#crypto";
 
 export class MDOCBuilder {
   public readonly defaultDocType = "org.iso.18013.5.1.mDL";
@@ -97,7 +97,7 @@ export class MDOCBuilder {
 
   async hashDigest(itemBytes: DataItem): Promise<Buffer | Uint8Array> {
     const encoded = cborEncode(itemBytes);
-    const sha256Hash = hash(encoded, this.digestAlgo);
+    const sha256Hash = await hash(encoded, this.digestAlgo);
 
     return sha256Hash;
   }
@@ -112,13 +112,13 @@ export class MDOCBuilder {
   }
 
   async buildMSO() {
-    const devicePrivateKey = await jose.importPKCS8(this.issuerPrivateKeyPem, "");
+    const issuerPrivateKey = await jose.importPKCS8(this.issuerPrivateKeyPem, "");
     const devicePublicKeyJwk = await jose.exportJWK(this.devicePublicKey);
     const issuerPublicKeyBuffer = fromPEM(this.issuerCertificatePem);
 
     const utcNow = new Date();
     const expTime = new Date();
-    expTime.setHours(expTime.getHours() + 5);
+    expTime.setFullYear(expTime.getFullYear() + 4);
 
     const signedDate = new StringDate(utcNow);
     const validFromDate = new StringDate(utcNow);
@@ -146,6 +146,6 @@ export class MDOCBuilder {
     const protectedHeader = { alg: "ES256" };
     const unprotectedHeader = { kid: "11", x5chain: [issuerPublicKeyBuffer] };
 
-    return createCoseSignature(protectedHeader, unprotectedHeader, msoCbor, devicePrivateKey);
+    return createCoseSignature(protectedHeader, unprotectedHeader, msoCbor, issuerPrivateKey);
   }
 }
