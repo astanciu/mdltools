@@ -9,10 +9,13 @@ export class MDOC {
   private defaultNamespace = "org.iso.18013.5.1";
   public readonly mdoc: CBORMap;
   public attributes: Record<string, any> = {};
+  public attributesByNamespace: Record<string, Record<string, any>> = {};
+  public rawCbor: string;
 
   static async from<T>(data: string | Buffer) {
     const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data, "hex");
-    const mdoc = new MDOC(MDOC.decode(buffer), blocker);
+    const cborHex = Buffer.isBuffer(data) ? data.toString("hex") : data;
+    const mdoc = new MDOC(MDOC.decode(buffer), cborHex, blocker);
 
     const proxy = new Proxy<MDOC>(mdoc, {
       get(target: MDOC, prop: string, receiver: any) {
@@ -38,10 +41,11 @@ export class MDOC {
     return mdoc;
   }
 
-  constructor(mdoc: CBORMap, b) {
+  constructor(mdoc: CBORMap, cbor: string, b) {
     if (b !== blocker) throw new Error("Cannot use constructor directly. Use MDOC.from()");
     this.mdoc = mdoc;
     this.buildAttributeMap();
+    this.rawCbor = cbor;
   }
 
   // TODO: how do we handle multiple mdoc.documents, if each one has the default namespace?
@@ -65,6 +69,7 @@ export class MDOC {
   }
 
   private loadAttributes(namespace) {
+    this.attributesByNamespace[namespace] = {}
     const nsAttrs = this.mdoc?.get("documents")?.[0]?.get("issuerSigned")?.get("nameSpaces")?.get(namespace);
     if (namespace === this.defaultNamespace) {
       // load the default namespace attributes in order defined in MDL_FIELDS
@@ -73,6 +78,7 @@ export class MDOC {
         const attributeValue = this.getElementValue(attributeName, nsAttrs);
         if (attributeValue) {
           this.attributes[attributeName] = attributeValue;
+          this.attributesByNamespace[namespace][attributeName] = attributeValue;
         }
       }
 
@@ -83,6 +89,7 @@ export class MDOC {
         const attributeValue = this.getElementValue(attributeName, nsAttrs);
         if (attributeValue) {
           this.attributes[attributeName] = attributeValue;
+          this.attributesByNamespace[namespace][attributeName] = attributeValue;
         }
       }
     } else {
@@ -92,6 +99,7 @@ export class MDOC {
         const attributeValue = this.parseValue(item.data?.get("elementValue"));
         if (attributeValue) {
           this.attributes[attributeName] = attributeValue;
+          this.attributesByNamespace[namespace][attributeName] = attributeValue;
         }
       }
     }

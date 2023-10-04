@@ -17,34 +17,34 @@ async function go() {
 
   await builder.addNameSpace("org.iso.18013.5.1", {
     // Required Attributes
-    family_name: "Jones",
-    given_name: "Ava",
-    birth_date: "2007-03-25",
-    issue_date: "2023-09-01",
-    expiry_date: "2028-09-31",
+    family_name: "Smith",
+    given_name: "Jon",
+    birth_date: "1980-03-25",
+    issue_date: "2023-05-01",
+    expiry_date: "2028-05-31",
     issuing_country: "US",
     issuing_authority: "NY DMV",
-    document_number: "01-856-5050",
+    document_number: "01-734-1010",
     portrait: "bstr",
     driving_privileges: [
       {
         vehicle_category_code: "C",
-        issue_date: "2023-09-01",
-        expiry_date: "2028-09-31",
+        issue_date: "2023-05-01",
+        expiry_date: "2028-05-31",
       },
     ],
     un_distinguishing_sign: "tbd-us.ny.dmv",
 
     // Optional Attributes
-    sex: "F",
-    height: "5' 8\"",
-    weight: "120lb",
+    sex: "M",
+    height: "6' 2\"",
+    weight: "180lb",
     eye_colour: "brown",
     hair_colour: "brown",
-    resident_addres: "123 Street Rd",
-    resident_city: "Brooklyn",
+    resident_addres: "555 5Th Ave",
+    resident_city: "New york",
     resident_state: "NY",
-    resident_postal_code: "19001",
+    resident_postal_code: "18002",
     resident_country: "US",
     issuing_jurisdiction: "New York",
   });
@@ -54,7 +54,7 @@ async function go() {
     registered: boolean;
   };
   await builder.addNameSpace("org.acme.test", {
-    color: "red",
+    color: "blue",
     registered: true,
   });
 
